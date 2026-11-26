@@ -75,6 +75,7 @@ final class UsageStore {
             snapshots[s.provider] = s
         }
         lastRefresh = Date()
+        NSLog("LimitsBar: refreshed: %@", menuBarText)
     }
 
     func toggle(_ id: ProviderID) {
