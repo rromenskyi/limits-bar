@@ -7,7 +7,8 @@ import Testing
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 
     /// Keys passed indirectly (ternaries, enum titles, window label heads).
-    static let indirectKeys = ["Checking…", "No supported CLIs found", "Compact", "Bars", "Numbers", "5h", "Week", "Day", "Window"]
+    static let indirectKeys = ["Checking…", "No supported CLIs found", "Compact", "Bars", "Numbers", "5h", "Week", "Day", "Window",
+                               "Short", "Long", "Limit", "Scoped", "%dh", "%dm"]
     /// Pass-through formats that need no translation.
     static let ignored: Set<String> = ["Muse: %@"]
 

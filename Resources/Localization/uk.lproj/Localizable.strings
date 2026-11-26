@@ -59,3 +59,9 @@
 "Turn On Notifications in System Settings…" = "Увімкнути сповіщення в Системних параметрах…";
 "Compact" = "Компактно";
 "config.json has an error. Fix it before changing settings here." = "У config.json помилка. Виправте її, перш ніж змінювати налаштування тут.";
+"Short" = "Коротке";
+"Long" = "Довге";
+"Limit" = "Ліміт";
+"Scoped" = "Окремий";
+"%dh" = "%d год";
+"%dm" = "%d хв";

@@ -73,6 +73,12 @@ public struct Config: Codable, Equatable, Sendable {
         public var command: [String]
         public var timeout: Double?
 
+        /// `timeout` clamped to 1...300 seconds (default 60).
+        public var effectiveTimeout: TimeInterval {
+            guard let t = timeout, t.isFinite else { return 60 }
+            return min(300, max(1, t))
+        }
+
         public init(id: String, name: String, tag: String? = nil, command: [String], timeout: Double? = nil) {
             self.id = id
             self.name = name
@@ -92,7 +98,13 @@ public struct Config: Codable, Equatable, Sendable {
     }
 
     public var allProviderIDs: [ProviderID] {
-        ProviderID.builtIns + custom.map(\.providerID)
+        ProviderID.builtIns + validCustom.map(\.providerID)
+    }
+
+    /// Custom providers with a usable, unique id that doesn't shadow a built-in (first one wins).
+    public var validCustom: [CustomProvider] {
+        var seen = Set(ProviderID.builtIns.map(\.id))
+        return custom.filter { !$0.id.isEmpty && seen.insert($0.id).inserted }
     }
 
     // MARK: - File

@@ -7,6 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION="${VERSION:-0.0.0}"
+[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "error: VERSION must look like 1.2.3, got '$VERSION'" >&2; exit 1; }
 APP="build/LimitsBar.app"
 # Public half of the Sparkle EdDSA key; the private half signs releases (see RELEASING.md).
 SPARKLE_PUBLIC_KEY="Ukk6zaeV5vKF+wRJ/G7xHaP+m8QbtdfsHqSwBIOlSlE="
@@ -16,8 +17,16 @@ ARCHS=(--arch arm64 --arch x86_64)
 swift build -c release "${ARCHS[@]}"
 BIN_DIR="$(swift build -c release "${ARCHS[@]}" --show-bin-path)"
 SPARKLE="$BIN_DIR/Sparkle.framework"
-[[ -d "$SPARKLE" ]] || SPARKLE="$(find .build -path "*release*" -name Sparkle.framework -type d | head -1)"
-[[ -d "$SPARKLE" ]] || { echo "error: Sparkle.framework not found under .build" >&2; exit 1; }
+[[ -d "$SPARKLE" ]] || { echo "error: $SPARKLE not found" >&2; exit 1; }
+
+# Only signed (release) builds get the update feed; a local ad-hoc build must not replace itself
+# with the latest release.
+SPARKLE_KEYS=""
+if [[ -n "${SIGN_IDENTITY:-}" && "${SIGN_IDENTITY}" != "-" ]]; then
+  SPARKLE_KEYS="    <key>SUFeedURL</key><string>${FEED_URL}</string>
+    <key>SUPublicEDKey</key><string>${SPARKLE_PUBLIC_KEY}</string>
+    <key>SUEnableAutomaticChecks</key><true/>"
+fi
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
@@ -51,12 +60,11 @@ ${LOCALIZATIONS}
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSHumanReadableCopyright</key><string>MIT License</string>
-    <key>SUFeedURL</key><string>${FEED_URL}</string>
-    <key>SUPublicEDKey</key><string>${SPARKLE_PUBLIC_KEY}</string>
-    <key>SUEnableAutomaticChecks</key><true/>
+${SPARKLE_KEYS}
 </dict>
 </plist>
 PLIST
 
+plutil -lint "$APP/Contents/Info.plist" >/dev/null
 ./scripts/codesign-app.sh "$APP"
 echo "Built $APP ($VERSION)"

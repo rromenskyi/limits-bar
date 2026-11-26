@@ -41,7 +41,7 @@ public struct CommandProvider: UsageProvider {
                 throw ProviderError.notConfigured(Lf("%@ not found", first))
             }
             let args = config.command.dropFirst().map { ($0 as NSString).expandingTildeInPath }
-            let r = try await Shell.run(exe, Array(args), timeout: config.timeout ?? 60)
+            let r = try await Shell.run(exe, Array(args), timeout: config.effectiveTimeout)
             guard let json = try? JSONObject.parse(r.stdout) else {
                 let detail = r.stderr.split(separator: "\n").last.map(String.init) ?? "exit \(r.status)"
                 throw ProviderError.failed(Lf("%@ command printed no JSON: %@", id.displayName, detail))

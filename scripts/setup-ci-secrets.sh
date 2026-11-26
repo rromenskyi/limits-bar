@@ -8,7 +8,7 @@
 #      ./scripts/setup-ci-secrets.sh
 #   3. Delete the exported .p12.
 #
-# The script asks for the .p12 password, so run it in a terminal (or pass P12_PASSWORD).
+# The script asks for the .p12 password, so run it in a terminal.
 #
 # Sets DEVELOPER_ID_P12_BASE64, DEVELOPER_ID_P12_PASSWORD, NOTARY_KEY_P8_BASE64,
 # NOTARY_KEY_ID, NOTARY_ISSUER_ID and SPARKLE_PRIVATE_KEY.
@@ -20,18 +20,20 @@ REPO="${REPO:-rromenskyi/limits-bar}"
 
 [[ -f "$DEVELOPER_ID_P12" ]] || { echo "error: $DEVELOPER_ID_P12 not found. Export it from Keychain Access first (step 1)." >&2; exit 1; }
 [[ -f "$NOTARY_KEY_P8" ]] || { echo "error: $NOTARY_KEY_P8 not found" >&2; exit 1; }
-if [[ -z "${P12_PASSWORD:-}" ]]; then
-  [[ -t 0 ]] || { echo "error: no terminal to ask for the .p12 password; run this in Terminal or set P12_PASSWORD" >&2; exit 1; }
-  read -r -s -p "Password of $DEVELOPER_ID_P12: " P12_PASSWORD; echo
-fi
-openssl pkcs12 -in "$DEVELOPER_ID_P12" -passin "pass:$P12_PASSWORD" -nokeys -legacy >/dev/null 2>&1 \
-  || openssl pkcs12 -in "$DEVELOPER_ID_P12" -passin "pass:$P12_PASSWORD" -nokeys >/dev/null \
+[[ -t 0 ]] || { echo "error: no terminal to ask for the .p12 password; run this in Terminal" >&2; exit 1; }
+read -r -s -p "Password of $DEVELOPER_ID_P12: " P12_PASSWORD; echo
+# The password goes to openssl on stdin, never on its command line.
+printf '%s\n' "$P12_PASSWORD" | openssl pkcs12 -in "$DEVELOPER_ID_P12" -passin stdin -nokeys -legacy >/dev/null 2>&1 \
+  || printf '%s\n' "$P12_PASSWORD" | openssl pkcs12 -in "$DEVELOPER_ID_P12" -passin stdin -nokeys >/dev/null \
   || { echo "error: wrong password or not a .p12" >&2; exit 1; }
 
 TMP="$(mktemp -d)"; chmod 700 "$TMP"
 trap 'rm -rf "$TMP"' EXIT
 GENERATE_KEYS="$(find .build/artifacts -name generate_keys -path "*/bin/*" | head -1)"
 [[ -x "$GENERATE_KEYS" ]] || { echo "error: run swift build first (it fetches Sparkle's tools)" >&2; exit 1; }
+EXPECTED="$(sed -n 's/^SPARKLE_PUBLIC_KEY="\(.*\)"$/\1/p' scripts/build-app.sh)"
+ACTUAL="$("$GENERATE_KEYS" --account limits-bar -p | tail -1)"
+[[ "$ACTUAL" == "$EXPECTED" ]] || { echo "error: keychain Sparkle key ($ACTUAL) doesn't match build-app.sh ($EXPECTED)" >&2; exit 1; }
 "$GENERATE_KEYS" --account limits-bar -x "$TMP/sparkle.key" >/dev/null
 
 base64 -i "$DEVELOPER_ID_P12" | gh secret set DEVELOPER_ID_P12_BASE64 -R "$REPO"

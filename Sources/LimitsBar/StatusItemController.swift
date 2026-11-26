@@ -29,8 +29,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.appearance = NSApp.appearance  // nil unless LIMITSBAR_APPEARANCE forces one
         statusItem.menu = menu
         store.onRefresh.append { [weak self] _ in
-            // Fresh numbers arrived while the menu is open: rebuild it in place.
-            guard let self, self.menuIsOpen else { return }
+            // The usage rows observe the store and update themselves. Rebuild only when their layout
+            // changes (providers or windows appear or go), so an open submenu isn't torn down.
+            guard let self, self.menuIsOpen, self.layoutKey != self.builtLayoutKey else { return }
             self.rebuild()
         }
         updateButton()
@@ -89,7 +90,19 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         }
     }
 
+    private var builtLayoutKey = ""
+
+    /// What decides the menu's shape: which providers show, how many windows each has, and whether
+    /// each shows a status line.
+    private var layoutKey: String {
+        store.visible.map { id in
+            let s = store.snapshots[id]
+            return "\(id.id):\(s?.windows.count ?? -1):\(s?.status.message == nil ? 0 : 1)"
+        }.joined(separator: ",") + "|\(store.configError ?? "")"
+    }
+
     private func rebuild() {
+        builtLayoutKey = layoutKey
         menu.removeAllItems()
 
         if store.visible.isEmpty {

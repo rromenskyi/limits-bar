@@ -13,7 +13,8 @@ public struct MuseProvider: UsageProvider {
             let r = try await Shell.run(muse, ["usage", "--json"], timeout: 90)
             guard let json = try? JSONObject.parse(r.stdout) else {
                 let detail = r.stderr.split(separator: "\n").last.map(String.init) ?? "exit \(r.status)"
-                if detail.localizedCaseInsensitiveContains("not logged in") {
+                if r.stderr.localizedCaseInsensitiveContains("not logged in")
+                    || r.stderr.localizedCaseInsensitiveContains("not signed in") {
                     throw ProviderError.notConfigured(L("Muse is not logged in"))
                 }
                 throw ProviderError.failed(Lf("muse usage failed: %@", detail))

@@ -59,3 +59,9 @@
 "Turn On Notifications in System Settings…" = "시스템 설정에서 알림 켜기…";
 "Compact" = "간결하게";
 "config.json has an error. Fix it before changing settings here." = "config.json에 오류가 있습니다. 여기서 설정을 바꾸기 전에 수정하세요.";
+"Short" = "단기";
+"Long" = "장기";
+"Limit" = "한도";
+"Scoped" = "개별";
+"%dh" = "%d시간";
+"%dm" = "%d분";

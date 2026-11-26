@@ -21,7 +21,7 @@ while IFS= read -r -d '' f; do
   file -b "$f" | grep -q "Mach-O" || continue
   [[ "$f" == "$APP/Contents/MacOS/LimitsBar" ]] && continue
   [[ "$f" == *.xpc/Contents/MacOS/* || "$f" == *.app/Contents/MacOS/* ]] && continue
-  codesign "${OPTS[@]}" "$f"
+  codesign "${OPTS[@]}" --preserve-metadata=entitlements "$f"
 done < <(find "$APP/Contents/Frameworks" -type f -perm -u+x -print0 | sort -rz)
 
 while IFS= read -r -d '' b; do

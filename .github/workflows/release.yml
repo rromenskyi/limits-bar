@@ -19,16 +19,30 @@ jobs:
   release:
     runs-on: macos-15
     env:
-      HAS_SECRETS: ${{ secrets.DEVELOPER_ID_P12_BASE64 != '' && secrets.NOTARY_KEY_P8_BASE64 != '' && secrets.SPARKLE_PRIVATE_KEY != '' }}
+      HAS_SECRETS: ${{ secrets.DEVELOPER_ID_P12_BASE64 != '' && secrets.DEVELOPER_ID_P12_PASSWORD != '' && secrets.NOTARY_KEY_P8_BASE64 != '' && secrets.NOTARY_KEY_ID != '' && secrets.NOTARY_ISSUER_ID != '' && secrets.SPARKLE_PRIVATE_KEY != '' }}
     steps:
+      - name: Check tag
+        run: |
+          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] \
+            || { echo "::error::Release tags must look like v1.2.3, got $GITHUB_REF_NAME"; exit 1; }
       - name: Check secrets
         if: env.HAS_SECRETS != 'true'
-        run: echo "::notice::Signing secrets are not set (see RELEASING.md); skipping the release build."
+        run: |
+          # Forks have no secrets and just skip; in this repo a missing secret is an error, so a
+          # tag never ends green without a release.
+          if [[ "$GITHUB_REPOSITORY" == "rromenskyi/limits-bar" ]]; then
+            echo "::error::Release secrets are missing (see RELEASING.md)"; exit 1
+          fi
+          echo "::notice::Release secrets are not set; skipping the release build."
       - uses: actions/checkout@v4
         if: env.HAS_SECRETS == 'true'
       - name: Select Xcode
         if: env.HAS_SECRETS == 'true'
-        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+        run: |
+          X="$(ls -d /Applications/Xcode_26*.app | grep -vi beta | sort -V | tail -1)"
+          [[ -n "$X" ]] || { echo "error: no Xcode 26 on the runner" >&2; exit 1; }
+          sudo xcode-select -s "$X"
+          swift --version
       - name: Set up signing
         if: env.HAS_SECRETS == 'true'
         env:
@@ -80,17 +94,23 @@ jobs:
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: ./scripts/make-appcast.sh
+      # Uploaded as a draft and published only once both files are there, so the feed never
+      # points at a DMG whose signature doesn't match. A published release is never overwritten.
       - name: Publish release
         if: env.HAS_SECRETS == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if gh release view "$GITHUB_REF_NAME" --json isDraft -q .isDraft 2>/dev/null | grep -q false; then
+            echo "::error::$GITHUB_REF_NAME is already published; tag a new version instead"; exit 1
+          fi
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" build/LimitsBar.dmg build/appcast.xml --clobber
           else
             gh release create "$GITHUB_REF_NAME" build/LimitsBar.dmg build/appcast.xml \
-              --title "LimitsBar $VERSION" --generate-notes
+              --draft --title "LimitsBar $VERSION" --generate-notes
           fi
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest
       - name: Remove signing keychain
         if: always() && env.HAS_SECRETS == 'true'
         run: |

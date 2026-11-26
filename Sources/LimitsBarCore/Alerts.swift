@@ -64,6 +64,13 @@ public enum AlertPlanner {
                 }
             }
         }
+        // Forget keys for windows or thresholds a provider no longer reports, so they don't pile up.
+        for s in snapshots where s.status == .ok {
+            let live = Set(s.windows.flatMap { w in thresholds.map { firedPrefix(s.provider, w, $0) } })
+            fired = fired.filter { key in
+                !key.hasPrefix("\(s.provider.id)/") || live.contains { key.hasPrefix($0) }
+            }
+        }
         return (out, fired)
     }
 }

@@ -12,6 +12,22 @@ REPO="${GITHUB_REPOSITORY:-rromenskyi/limits-bar}"
 SIGN_UPDATE="$(find .build/artifacts -name sign_update -path "*/bin/sign_update" | grep -v old_dsa | head -1)"
 [[ -x "$SIGN_UPDATE" ]] || { echo "error: Sparkle sign_update not found; run swift build first" >&2; exit 1; }
 
+# The update key must match the public key the app ships with, or every install would reject the
+# update while the release still looks fine.
+EXPECTED="$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' build/LimitsBar.app/Contents/Info.plist)"
+if [[ -n "${SPARKLE_PRIVATE_KEY:-}" ]]; then
+  OPENSSL="$(brew --prefix openssl@3 2>/dev/null)/bin/openssl"
+  [[ -x "$OPENSSL" ]] || OPENSSL=openssl
+  SEED="$(printf '%s' "$SPARKLE_PRIVATE_KEY" | base64 --decode | head -c 32 | xxd -p | tr -d '\n')"
+  ACTUAL="$(printf '302e020100300506032b657004220420%s' "$SEED" | xxd -r -p \
+    | "$OPENSSL" pkey -inform DER -pubout -outform DER | tail -c 32 | base64)"
+else
+  GENERATE_KEYS="$(dirname "$SIGN_UPDATE")/generate_keys"
+  ACTUAL="$("$GENERATE_KEYS" --account limits-bar -p | tail -1)"
+fi
+[[ -n "$ACTUAL" && "$ACTUAL" == "$EXPECTED" ]] \
+  || { echo "error: the Sparkle signing key doesn't match the app's SUPublicEDKey ($EXPECTED)" >&2; exit 1; }
+
 if [[ -n "${SPARKLE_PRIVATE_KEY:-}" ]]; then
   ATTRS="$(printf '%s\n' "$SPARKLE_PRIVATE_KEY" | "$SIGN_UPDATE" --ed-key-file - "$DMG")"
 else

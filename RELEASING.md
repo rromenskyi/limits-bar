@@ -14,10 +14,14 @@ git push origin v0.2.0
 ```
 
 `.github/workflows/release.yml` tests, builds, signs, notarizes, signs the update for Sparkle and
-publishes the release with `LimitsBar.dmg` and `appcast.xml`. Versions are plain `X.Y.Z` and must
-increase, since Sparkle compares them.
+publishes the release with `LimitsBar.dmg` and `appcast.xml`. Tags must be plain `vX.Y.Z` and
+increase, since Sparkle compares versions. The release is uploaded as a draft and published only
+when both files are in place; an already published release is never overwritten, so a fix means a
+new version. Before signing the update, the workflow checks that the Sparkle key matches the
+public key inside the app and stops if it doesn't.
 
-The workflow needs these repository secrets; without them it skips the build with a notice.
+The workflow needs these repository secrets. In this repository a missing secret fails the run;
+forks without secrets skip the build with a notice.
 
 | Secret | What |
 |---|---|
@@ -36,10 +40,13 @@ stored in the keychain under the account `limits-bar`:
 VERSION=0.2.0 \
 SIGN_IDENTITY="Developer ID Application: <Team> (<TEAMID>)" \
 NOTARY_PROFILE=<profile> \
-./scripts/release-local.sh
+./scripts/release-local.sh        # refuses to run with uncommitted changes
 
+git tag v0.2.0 && git push origin v0.2.0
 gh release create v0.2.0 build/LimitsBar.dmg build/appcast.xml --title "LimitsBar 0.2.0" --generate-notes
 ```
+
+Signing and the Sparkle key live in the login keychain, so macOS may ask for your password.
 
 ## The Sparkle key
 

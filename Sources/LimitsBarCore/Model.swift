@@ -112,6 +112,23 @@ public struct ProviderSnapshot: Sendable, Equatable, Encodable {
 
     public static let rateLimitBackoff: TimeInterval = 10 * 60
 
+    /// Wait after the `streak`-th consecutive HTTP 429: 10, 20, 40, then 60 minutes.
+    public static func backoff(streak: Int) -> TimeInterval {
+        min(60 * 60, rateLimitBackoff * pow(2, Double(max(1, streak) - 1)))
+    }
+
+    /// A failed check keeps the previous numbers (marked with the new error) instead of blanking
+    /// the row. Successes and "not configured" replace the previous snapshot as they are.
+    public func merged(over previous: ProviderSnapshot?) -> ProviderSnapshot {
+        guard windows.isEmpty, let previous, !previous.windows.isEmpty, status != .ok else { return self }
+        if case .notConfigured = status { return self }
+        var s = self
+        s.windows = previous.windows
+        s.plan = plan ?? previous.plan
+        s.fetchedAt = previous.fetchedAt
+        return s
+    }
+
     /// The tightest window, which is what actually limits you right now.
     public var minRemaining: Double? {
         windows.map(\.remainingPercent).min()
@@ -164,6 +181,6 @@ public enum Providers {
     /// Built-ins plus custom command providers from the config, in display order.
     public static func all(config: Config) -> [any UsageProvider] {
         if DemoProvider.isEnabled { return DemoProvider.all() }
-        return builtIns() + config.custom.map(CommandProvider.init)
+        return builtIns() + config.validCustom.map(CommandProvider.init)
     }
 }

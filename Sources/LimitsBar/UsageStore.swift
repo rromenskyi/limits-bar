@@ -19,6 +19,7 @@ final class UsageStore {
 
     private var pollTask: Task<Void, Never>?
     private var rateLimitStreak: [ProviderID: Int] = [:]
+    private var refreshPending = false
     /// Called after every refresh with the fresh snapshots (alerts, open menu).
     var onRefresh: [@MainActor ([ProviderSnapshot]) -> Void] = []
 
@@ -155,9 +156,13 @@ final class UsageStore {
     }
 
     func refresh() async {
-        guard !isRefreshing else { return }
+        // A refresh asked for while one runs (e.g. a provider was just enabled) runs right after it.
+        guard !isRefreshing else { refreshPending = true; return }
         isRefreshing = true
-        defer { isRefreshing = false }
+        defer {
+            isRefreshing = false
+            if refreshPending { refreshPending = false; Task { await refresh() } }
+        }
         reloadConfig()
         let now = Date()
         let active = Providers.all(config: config).filter { p in
@@ -171,33 +176,18 @@ final class UsageStore {
             return out
         }
         for var s in results {
-            // Consecutive 429s back off exponentially: 10, 20, 40, then 60 minutes.
             if s.retryAfter != nil {
                 let streak = (rateLimitStreak[s.provider] ?? 0) + 1
                 rateLimitStreak[s.provider] = streak
-                let backoff = min(60 * 60, ProviderSnapshot.rateLimitBackoff * pow(2, Double(streak - 1)))
-                s.retryAfter = Date().addingTimeInterval(backoff)
+                s.retryAfter = Date().addingTimeInterval(ProviderSnapshot.backoff(streak: streak))
             } else {
                 rateLimitStreak[s.provider] = nil
             }
-            // A failed check keeps the last known numbers, marked with the error, rather than blanking the row.
-            if s.windows.isEmpty, let old = snapshots[s.provider], !old.windows.isEmpty,
-               s.status != .ok, !Self.isMissingStatus(s.status) {
-                s.windows = old.windows
-                s.plan = s.plan ?? old.plan
-                s.fetchedAt = old.fetchedAt
-            }
-            snapshots[s.provider] = s
+            snapshots[s.provider] = s.merged(over: snapshots[s.provider])
         }
         lastRefresh = Date()
-        NSLog("LimitsBar: refreshed: %@", menuBarText)
         for handler in onRefresh { handler(results) }
         Snapshot.captureStatusItemIfRequested()
-    }
-
-    private static func isMissingStatus(_ s: ProviderStatus) -> Bool {
-        if case .notConfigured = s { return true }
-        return false
     }
 
     // MARK: - Menu bar

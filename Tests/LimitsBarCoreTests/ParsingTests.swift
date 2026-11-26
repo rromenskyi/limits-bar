@@ -329,3 +329,75 @@ private func json(_ s: String) throws -> [String: Any] {
         #expect(!DevinProvider.isSafeServer(URL(string: "http://server.example.invalid/x")!))
     }
 }
+
+@Suite struct SecondReviewFixes {
+    let week = UsageWindow(label: "Week", remainingPercent: 40, resetsAt: nil)
+
+    @Test func failedCheckKeepsLastNumbersButSuccessReplaces() {
+        let old = ProviderSnapshot(provider: .codex, plan: "Plus", windows: [week], fetchedAt: Date(timeIntervalSince1970: 1))
+        let failed = ProviderSnapshot(provider: .codex, status: .error("HTTP 500")).merged(over: old)
+        #expect(failed.windows == [week])
+        #expect(failed.plan == "Plus")
+        #expect(failed.status == .error("HTTP 500"))
+        #expect(failed.fetchedAt == Date(timeIntervalSince1970: 1))
+        let missing = ProviderSnapshot(provider: .codex, status: .notConfigured("gone")).merged(over: old)
+        #expect(missing.windows.isEmpty)
+        let fresh = ProviderSnapshot(provider: .codex, windows: []).merged(over: old)
+        #expect(fresh.windows.isEmpty)
+    }
+
+    @Test func backoffDoublesToAnHour() {
+        #expect([1, 2, 3, 4, 9].map { ProviderSnapshot.backoff(streak: $0) / 60 } == [10, 20, 40, 60, 60])
+    }
+
+    @Test func booleansAreNotPercentages() throws {
+        let j = try json(#"{"rate_limit":{"primary_window":{"used_percent":true,"limit_window_seconds":18000}}}"#)
+        #expect(try CodexProvider.parse(j).windows.isEmpty)
+        #expect(Num.double(42) == 42)
+    }
+
+    @Test func customProvidersAreDeduplicated() throws {
+        let c = try JSONDecoder().decode(Config.self, from: Data("""
+        {"custom":[{"id":"claude","name":"Fake","command":["x"]},
+                   {"id":"g","name":"G1","command":["x"]},{"id":"g","name":"G2","command":["y"]},
+                   {"id":"","name":"Empty","command":["z"]}]}
+        """.utf8))
+        #expect(c.allProviderIDs.map(\.id) == ["claude", "codex", "muse", "devin", "g"])
+        #expect(c.validCustom.map(\.name) == ["G1"])
+    }
+
+    @Test func customTimeoutIsClamped() {
+        let p = { (t: Double?) in Config.CustomProvider(id: "e", name: "E", command: ["x"], timeout: t).effectiveTimeout }
+        #expect(p(nil) == 60)
+        #expect(p(0) == 1)
+        #expect(p(-5) == 1)
+        #expect(p(1e9) == 300)
+    }
+
+    @Test func claudeSessionComesFirst() throws {
+        let j = try json("""
+        {"limits":[{"kind":"weekly_all","percent":3,"resets_at":null},{"kind":"session","percent":18,"resets_at":null},
+                   {"kind":"weekly_scoped","percent":0,"resets_at":null,"scope":null}]}
+        """)
+        #expect(try ClaudeProvider.parse(j).map(\.label) == ["5h", "Week", "Week · Scoped"])
+    }
+
+    @Test func staleFiredKeysArePruned() {
+        let a = Config.Alerts(thresholds: [20])
+        let low = [ProviderSnapshot(provider: .claude, windows: [
+            UsageWindow(label: "Week", remainingPercent: 5, resetsAt: nil),
+            UsageWindow(label: "Week · Opus", remainingPercent: 5, resetsAt: nil)])]
+        var r = AlertPlanner.plan(snapshots: low, alerts: a, fired: ["codex/Week/20@-"])
+        #expect(r.fired.count == 3)
+        // Opus window disappears: its key goes, other providers' keys stay.
+        let fewer = [ProviderSnapshot(provider: .claude, windows: [UsageWindow(label: "Week", remainingPercent: 5, resetsAt: nil)])]
+        r = AlertPlanner.plan(snapshots: fewer, alerts: a, fired: r.fired)
+        #expect(r.fired.sorted() == ["claude/Week/20@-", "codex/Week/20@-"])
+    }
+
+    @Test func generatedLabelsAreFormatted() {
+        #expect(WindowLabel.display("2h") == "2h")
+        #expect(WindowLabel.display("30m") == "30m")
+        #expect(WindowLabel.display("Week · Opus") == "Week · Opus")
+    }
+}

@@ -89,12 +89,13 @@ public struct ClaudeProvider: UsageProvider {
                 switch kind {
                 case "session": label = "5h"
                 case "weekly_all": label = "Week"
-                case "weekly_scoped": label = scope.map { "Week · \($0)" } ?? "Week (scoped)"
+                case "weekly_scoped": label = "Week · " + (scope ?? "Scoped")
                 default: label = scope ?? kind.replacingOccurrences(of: "_", with: " ").capitalized
                 }
                 return .fromUsed(label: label, usedPercent: pct, resetsAt: Dates.iso(item["resets_at"]))
             }
-            if !windows.isEmpty { return windows }
+            // Session first: the menu bar's top bar is the first window.
+            if !windows.isEmpty { return windows.filter { $0.label == "5h" } + windows.filter { $0.label != "5h" } }
         }
         let known: [(String, String)] = [
             ("five_hour", "5h"), ("seven_day", "Week"),

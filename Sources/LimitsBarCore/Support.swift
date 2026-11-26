@@ -129,8 +129,14 @@ enum HTTP {
         c.timeoutIntervalForRequest = 20
         c.httpCookieStorage = nil
         c.urlCache = nil
-        return URLSession(configuration: c)
+        return URLSession(configuration: c, delegate: NoRedirects(), delegateQueue: nil)
     }()
+
+    /// Usage endpoints don't redirect; following one could send a token or key to another host.
+    final class NoRedirects: NSObject, URLSessionTaskDelegate, Sendable {
+        func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                        newRequest request: URLRequest) async -> URLRequest? { nil }
+    }
 
     static func json(_ request: URLRequest, provider: String) async throws -> [String: Any] {
         let (data, response) = try await session.data(for: request)
@@ -138,6 +144,7 @@ enum HTTP {
         switch code {
         case 200..<300: break
         case 401, 403: throw ProviderError.stale(Lf("%@ rejected the token (HTTP %d). Use the %@ CLI once to refresh it.", provider, code, provider))
+        case 300..<400: throw ProviderError.failed(Lf("%@ usage request failed (HTTP %d)", provider, code))
         case 429: throw ProviderError.rateLimited(Lf("%@ is rate limiting usage checks (HTTP 429)", provider))
         default: throw ProviderError.failed(Lf("%@ usage request failed (HTTP %d)", provider, code))
         }
@@ -158,7 +165,9 @@ enum Num {
     /// Accepts numbers or numeric strings (protobuf JSON encodes int64 as strings).
     static func double(_ v: Any?) -> Double? {
         switch v {
-        case let n as NSNumber: n.doubleValue
+        case let n as NSNumber:
+            // JSON booleans arrive as NSNumber too; `true` must not read as 1%.
+            CFGetTypeID(n) == CFBooleanGetTypeID() ? nil : n.doubleValue
         case let s as String: Double(s)
         default: nil
         }

@@ -59,3 +59,9 @@
 "Turn On Notifications in System Settings…" = "システム設定で通知をオンにする…";
 "Compact" = "コンパクト";
 "config.json has an error. Fix it before changing settings here." = "config.json にエラーがあります。ここで設定を変更する前に修正してください。";
+"Short" = "短期";
+"Long" = "長期";
+"Limit" = "上限";
+"Scoped" = "個別";
+"%dh" = "%d時間";
+"%dm" = "%d分";

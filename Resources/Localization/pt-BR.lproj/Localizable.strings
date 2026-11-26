@@ -59,3 +59,9 @@
 "Turn On Notifications in System Settings…" = "Ativar notificações nos Ajustes do Sistema…";
 "Compact" = "Compacto";
 "config.json has an error. Fix it before changing settings here." = "O config.json tem um erro. Corrija-o antes de alterar os ajustes aqui.";
+"Short" = "Curto";
+"Long" = "Longo";
+"Limit" = "Limite";
+"Scoped" = "Específico";
+"%dh" = "%d h";
+"%dm" = "%d min";

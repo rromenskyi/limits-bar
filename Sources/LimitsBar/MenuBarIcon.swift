@@ -49,9 +49,20 @@ enum MenuBarIcon {
     static func compactImage(for items: [Item]) -> NSImage {
         let n = CGFloat(max(1, items.count))
         let width = n * levelWidth + (n - 1) * levelGap
-        let image = NSImage(size: NSSize(width: width, height: height), flipped: true) { _ in
+        let image = NSImage(size: NSSize(width: items.isEmpty ? levelWidth * 2 + levelGap : width, height: height),
+                            flipped: true) { _ in
             let top = (height - levelHeight) / 2
             let r = levelWidth / 2
+            if items.isEmpty {
+                // Nothing to show yet (or no provider found): two empty tracks keep the item clickable.
+                for i in 0..<2 {
+                    NSColor.black.withAlphaComponent(0.45).setFill()
+                    NSBezierPath(roundedRect: NSRect(x: CGFloat(i) * (levelWidth + levelGap), y: top,
+                                                     width: levelWidth, height: levelHeight),
+                                 xRadius: r, yRadius: r).fill()
+                }
+                return true
+            }
             for (i, item) in items.enumerated() {
                 let alpha: CGFloat = item.dimmed ? 0.45 : 1
                 let x = CGFloat(i) * (levelWidth + levelGap)

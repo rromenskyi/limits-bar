@@ -39,7 +39,7 @@ Apple, and it updates itself (Sparkle). Requires macOS 14 or later.
 The menu bar shows one small level bar per provider, in the order Claude, Codex, Muse, Devin,
 filled to what's left of its tightest window. Four providers take about 20 pt, so the item stays
 visible next to the camera notch. Under **Menu Bar Style** you can switch to **Bars** (a letter
-and two bars per provider: the short window on top, the week below) or **Numbers**
+and two bars per provider: the short window on top, the tightest longer window below) or **Numbers**
 (`C80 X12 M86 D100`). Hover the item for the numbers.
 
 | Compact (default) | Bars | Numbers |
@@ -146,7 +146,7 @@ Requires Swift 6 (Xcode 16 or later).
 ```sh
 git clone https://github.com/rromenskyi/limits-bar.git
 cd limits-bar
-./scripts/build-app.sh            # build/LimitsBar.app, ad-hoc signed
+./scripts/build-app.sh            # build/LimitsBar.app, ad-hoc signed, no auto-update
 open build/LimitsBar.app
 ```
 

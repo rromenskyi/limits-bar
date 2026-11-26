@@ -59,3 +59,9 @@
 "Turn On Notifications in System Settings…" = "在系统设置中打开通知…";
 "Compact" = "紧凑";
 "config.json has an error. Fix it before changing settings here." = "config.json 有错误。请先修正，再在这里更改设置。";
+"Short" = "短期";
+"Long" = "长期";
+"Limit" = "额度";
+"Scoped" = "单独";
+"%dh" = "%d 小时";
+"%dm" = "%d 分钟";
