@@ -279,7 +279,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let store = UsageStore(autoStart: false)
         let alerts = AlertNotifier(store: store)
-        store.onRefresh.append { [weak alerts] snapshots in alerts?.process(snapshots) }
+        store.onRefresh.append { [weak alerts] snapshots in
+            Task { await alerts?.process(snapshots) }
+        }
         self.alerts = alerts
         controller = StatusItemController(store: store, alerts: alerts, updater: updater)
         store.start()

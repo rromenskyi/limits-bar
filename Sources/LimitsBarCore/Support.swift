@@ -38,7 +38,10 @@ struct ShellResult {
 }
 
 enum Shell {
-    /// Runs a process with a timeout. Output is drained concurrently so large output can't deadlock the pipe.
+    static let outputCap = 4 << 20
+
+    /// Runs a process with a hard deadline. On timeout it sends SIGTERM, then SIGKILL, and returns
+    /// without waiting for pipes a leftover child may still hold open. Output is capped.
     static func run(_ executable: URL, _ args: [String], timeout: TimeInterval = 60) async throws -> ShellResult {
         try await withCheckedThrowingContinuation { cont in
             DispatchQueue.global().async {
@@ -54,30 +57,68 @@ enum Shell {
                 p.standardOutput = out
                 p.standardError = err
 
-                let group = DispatchGroup()
-                nonisolated(unsafe) var outData = Data()
-                nonisolated(unsafe) var errData = Data()
-                group.enter()
-                DispatchQueue.global().async { outData = out.fileHandleForReading.readDataToEndOfFile(); group.leave() }
-                group.enter()
-                DispatchQueue.global().async { errData = err.fileHandleForReading.readDataToEndOfFile(); group.leave() }
+                let collected = Collected()
+                let eof = DispatchGroup()
+                for (pipe, isOut) in [(out, true), (err, false)] {
+                    eof.enter()
+                    pipe.fileHandleForReading.readabilityHandler = { h in
+                        let d = h.availableData
+                        if d.isEmpty {
+                            h.readabilityHandler = nil
+                            eof.leave()
+                        } else {
+                            collected.append(d, toOut: isOut)
+                        }
+                    }
+                }
+                let exited = DispatchSemaphore(value: 0)
+                p.terminationHandler = { _ in exited.signal() }
 
                 do { try p.run() } catch {
+                    out.fileHandleForReading.readabilityHandler = nil
+                    err.fileHandleForReading.readabilityHandler = nil
                     cont.resume(throwing: ProviderError.failed(Lf("Could not run %@: %@", executable.lastPathComponent, error.localizedDescription)))
                     return
                 }
-                let timer = DispatchWorkItem { if p.isRunning { p.terminate() } }
-                DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: timer)
-                p.waitUntilExit()
-                timer.cancel()
-                group.wait()
-                if p.terminationReason == .uncaughtSignal {
+                var timedOut = false
+                if exited.wait(timeout: .now() + timeout) == .timedOut {
+                    timedOut = true
+                    p.terminate()
+                    if exited.wait(timeout: .now() + 2) == .timedOut {
+                        kill(p.processIdentifier, SIGKILL)
+                        _ = exited.wait(timeout: .now() + 2)
+                    }
+                }
+                // A child that inherited the pipes can keep them open; don't wait for it forever.
+                if eof.wait(timeout: .now() + 1) == .timedOut {
+                    out.fileHandleForReading.readabilityHandler = nil
+                    err.fileHandleForReading.readabilityHandler = nil
+                }
+                if timedOut {
                     cont.resume(throwing: ProviderError.failed(Lf("%@ timed out", executable.lastPathComponent)))
                     return
                 }
-                cont.resume(returning: ShellResult(status: p.terminationStatus, stdout: outData,
-                                                   stderr: String(decoding: errData, as: UTF8.self)))
+                let (o, e) = collected.snapshot()
+                cont.resume(returning: ShellResult(status: p.terminationStatus, stdout: o,
+                                                   stderr: String(decoding: e, as: UTF8.self)))
             }
+        }
+    }
+
+    /// Thread-safe output buffers for the two pipes.
+    final class Collected: @unchecked Sendable {
+        private let lock = NSLock()
+        private var out = Data(), err = Data()
+
+        func append(_ d: Data, toOut: Bool) {
+            lock.lock(); defer { lock.unlock() }
+            if toOut { if out.count < Shell.outputCap { out.append(d) } }
+            else if err.count < Shell.outputCap { err.append(d) }
+        }
+
+        func snapshot() -> (Data, Data) {
+            lock.lock(); defer { lock.unlock() }
+            return (out, err)
         }
     }
 }

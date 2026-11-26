@@ -58,3 +58,4 @@
 "Could not save config.json: %@" = "config.json을 저장할 수 없음: %@";
 "Turn On Notifications in System Settings…" = "시스템 설정에서 알림 켜기…";
 "Compact" = "간결하게";
+"config.json has an error. Fix it before changing settings here." = "config.json에 오류가 있습니다. 여기서 설정을 바꾸기 전에 수정하세요.";

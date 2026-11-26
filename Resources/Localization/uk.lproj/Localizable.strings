@@ -58,3 +58,4 @@
 "Could not save config.json: %@" = "Не вдалося зберегти config.json: %@";
 "Turn On Notifications in System Settings…" = "Увімкнути сповіщення в Системних параметрах…";
 "Compact" = "Компактно";
+"config.json has an error. Fix it before changing settings here." = "У config.json помилка. Виправте її, перш ніж змінювати налаштування тут.";

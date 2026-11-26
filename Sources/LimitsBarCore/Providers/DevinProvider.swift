@@ -26,7 +26,8 @@ public struct DevinProvider: UsageProvider {
             }
             let server = creds["api_server_url"] ?? "https://server.codeium.com"
             guard let url = URL(string: server.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                                + "/exa.seat_management_pb.SeatManagementService/GetUserStatus") else {
+                                + "/exa.seat_management_pb.SeatManagementService/GetUserStatus"),
+                  Self.isSafeServer(url) else {
                 throw ProviderError.failed(L("Bad Devin server URL"))
             }
             var req = URLRequest(url: url)
@@ -39,27 +40,42 @@ public struct DevinProvider: UsageProvider {
             ]]
             req.httpBody = try JSONSerialization.data(withJSONObject: body)
             let json = try await HTTP.json(req, provider: "Devin")
-            return Self.parse(json)
+            return try Self.parse(json)
         }
     }
 
-    /// Minimal `key = "value"` reader; the credentials file is flat.
+    /// The API key is only ever sent over HTTPS, or plain HTTP to this Mac.
+    static func isSafeServer(_ url: URL) -> Bool {
+        guard let host = url.host, !host.isEmpty else { return false }
+        if url.scheme == "https" { return true }
+        return url.scheme == "http" && ["localhost", "127.0.0.1", "::1"].contains(host)
+    }
+
+    /// Reader for the flat `key = "value"` credentials file: handles double or single quotes and
+    /// trailing `#` comments.
     static func parseTOML(_ text: String) -> [String: String] {
         var out: [String: String] = [:]
         for line in text.split(separator: "\n") {
             let parts = line.split(separator: "=", maxSplits: 1)
             guard parts.count == 2 else { continue }
             let k = parts[0].trimmingCharacters(in: .whitespaces)
-            var v = parts[1].trimmingCharacters(in: .whitespaces)
-            if v.hasPrefix("\""), v.hasSuffix("\""), v.count >= 2 { v = String(v.dropFirst().dropLast()) }
-            out[k] = v
+            guard !k.hasPrefix("#"), !k.hasPrefix("[") else { continue }
+            var v = Substring(parts[1].trimmingCharacters(in: .whitespaces))
+            if let q = v.first, q == "\"" || q == "'", let end = v.dropFirst().firstIndex(of: q) {
+                v = v[v.index(after: v.startIndex)..<end]
+            } else if let hash = v.firstIndex(of: "#") {
+                v = Substring(v[..<hash].trimmingCharacters(in: .whitespaces))
+            }
+            out[k] = String(v)
         }
         return out
     }
 
-    static func parse(_ json: [String: Any]) -> ProviderSnapshot {
-        let status = json["userStatus"] as? [String: Any] ?? [:]
-        let plan = status["planStatus"] as? [String: Any] ?? [:]
+    static func parse(_ json: [String: Any]) throws -> ProviderSnapshot {
+        guard let status = json["userStatus"] as? [String: Any],
+              let plan = status["planStatus"] as? [String: Any] else {
+            throw ProviderError.failed(L("Unexpected response format"))
+        }
         var windows: [UsageWindow] = []
         if let day = Num.double(plan["dailyQuotaRemainingPercent"]) {
             windows.append(UsageWindow(label: "Day", remainingPercent: day,

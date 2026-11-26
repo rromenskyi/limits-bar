@@ -49,7 +49,12 @@ final class AlertNotifier: NSObject, UNUserNotificationCenterDelegate {
         NSWorkspace.shared.open(url)
     }
 
-    func process(_ snapshots: [ProviderSnapshot]) {
+    /// Plans and sends alerts. Crossings are only recorded while notifications are allowed, so an
+    /// alert that couldn't be shown (permission pending or off) still fires once it's granted.
+    func process(_ snapshots: [ProviderSnapshot]) async {
+        let settings = await center.notificationSettings()
+        notificationsDenied = settings.authorizationStatus == .denied
+        guard [.authorized, .provisional].contains(settings.authorizationStatus) else { return }
         let fired = Set(UserDefaults.standard.stringArray(forKey: Self.firedKey) ?? [])
         let plan = AlertPlanner.plan(snapshots: snapshots, alerts: store.config.effectiveAlerts, fired: fired)
         UserDefaults.standard.set(Array(plan.fired).sorted(), forKey: Self.firedKey)

@@ -25,7 +25,7 @@ public struct ClaudeProvider: UsageProvider {
             req.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
             req.setValue("application/json", forHTTPHeaderField: "Accept")
             let json = try await HTTP.json(req, provider: "Claude")
-            return ProviderSnapshot(provider: id, plan: creds.plan, windows: Self.parse(json))
+            return ProviderSnapshot(provider: id, plan: creds.plan, windows: try Self.parse(json))
         }
     }
 
@@ -74,7 +74,11 @@ public struct ClaudeProvider: UsageProvider {
         return "Max " + raw[r.upperBound...]
     }
 
-    static func parse(_ json: [String: Any]) -> [UsageWindow] {
+    static func parse(_ json: [String: Any]) throws -> [UsageWindow] {
+        // A 200 without any known usage keys means the API changed or answered with an error object.
+        guard json["limits"] != nil || json["five_hour"] != nil || json["seven_day"] != nil else {
+            throw ProviderError.failed(L("Unexpected response format"))
+        }
         // Newer responses carry a generic `limits` list; prefer it when present.
         if let limits = json["limits"] as? [[String: Any]], !limits.isEmpty {
             let windows = limits.compactMap { item -> UsageWindow? in

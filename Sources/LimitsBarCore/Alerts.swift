@@ -18,13 +18,21 @@ public struct LimitAlert: Sendable, Equatable {
 
 /// Decides which low-limit alerts to send. Pure, so it can be tested without notifications.
 ///
-/// Each (provider, window, threshold) fires once when remaining drops to or below the threshold,
-/// and re-arms when remaining climbs back above it, which happens naturally when the window resets.
+/// Each (provider, window, threshold) fires once per quota period when remaining drops to or below
+/// the threshold. It re-arms when remaining climbs back above the threshold, or when the window's
+/// reset time moves on (a new period), even if the app missed the moment of the reset.
 public enum AlertPlanner {
     public static func muteKey(_ p: ProviderID, _ w: UsageWindow) -> String { "\(p.id)/\(w.label)" }
 
+    static func firedPrefix(_ p: ProviderID, _ w: UsageWindow, _ t: Double) -> String {
+        "\(p.id)/\(w.label)/\(String(format: "%g", t))@"
+    }
+
+    /// The period is the reset time in 10-minute buckets, so jitter in reported reset times
+    /// doesn't look like a new period.
     static func firedKey(_ p: ProviderID, _ w: UsageWindow, _ t: Double) -> String {
-        "\(p.id)/\(w.label)/\(Int(t))"
+        let period = w.resetsAt.map { String(Int(($0.timeIntervalSince1970 / 600).rounded())) } ?? "-"
+        return firedPrefix(p, w, t) + period
     }
 
     /// - Returns: alerts to send now (at most one per window: the lowest threshold crossed) and the
@@ -40,13 +48,15 @@ public enum AlertPlanner {
                 var lowestNew: Double?
                 for t in thresholds {
                     let key = firedKey(s.provider, w, t)
+                    let prefix = firedPrefix(s.provider, w, t)
                     if w.remainingPercent <= t {
                         if !fired.contains(key) {
+                            fired = fired.filter { !$0.hasPrefix(prefix) }  // drop older periods
                             fired.insert(key)
                             lowestNew = t
                         }
                     } else {
-                        fired.remove(key)
+                        fired = fired.filter { !$0.hasPrefix(prefix) }
                     }
                 }
                 if alerts.isEnabled, let t = lowestNew, !muted.contains(muteKey(s.provider, w)) {

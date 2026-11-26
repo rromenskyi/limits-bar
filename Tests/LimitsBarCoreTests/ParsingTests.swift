@@ -18,7 +18,7 @@ private func json(_ s: String) throws -> [String: Any] {
           {"kind":"weekly_scoped","percent":50,"resets_at":"2030-01-05T07:00:00+00:00",
            "scope":{"model":{"id":null,"display_name":"Opus"},"surface":null}}]}
         """)
-        let w = ClaudeProvider.parse(j)
+        let w = try ClaudeProvider.parse(j)
         #expect(w.map(\.label) == ["5h", "Week", "Week · Opus"])
         #expect(w.map(\.remainingPercent) == [82, 97, 50])
         #expect(w[0].resetsAt != nil)
@@ -30,7 +30,7 @@ private func json(_ s: String) throws -> [String: Any] {
          "seven_day":{"utilization":10,"resets_at":"2030-01-05T07:00:00+00:00"},
          "seven_day_opus":null}
         """)
-        let w = ClaudeProvider.parse(j)
+        let w = try ClaudeProvider.parse(j)
         #expect(w.map(\.label) == ["5h", "Week"])
         #expect(w[0].remainingPercent == 74.5)
     }
@@ -59,7 +59,7 @@ private func json(_ s: String) throws -> [String: Any] {
           "primary_window":{"used_percent":25,"limit_window_seconds":18000,"reset_at":1893456000},
           "secondary_window":{"used_percent":88,"limit_window_seconds":604800,"reset_at":1893800000}}}
         """)
-        let s = CodexProvider.parse(j)
+        let s = try CodexProvider.parse(j)
         #expect(s.plan == "Plus")
         #expect(s.windows.map(\.label) == ["5h", "Week"])
         #expect(s.windows.map(\.remainingPercent) == [75, 12])
@@ -68,7 +68,7 @@ private func json(_ s: String) throws -> [String: Any] {
 
     @Test func nullSecondary() throws {
         let j = try json(#"{"rate_limit":{"primary_window":{"used_percent":5,"limit_window_seconds":18000},"secondary_window":null}}"#)
-        #expect(CodexProvider.parse(j).windows.count == 1)
+        #expect(try CodexProvider.parse(j).windows.count == 1)
     }
 }
 
@@ -86,7 +86,7 @@ private func json(_ s: String) throws -> [String: Any] {
     }
 
     @Test func reasonWithoutAllowance() throws {
-        let j = try json(#"{"schemaVersion":1,"allowance":null,"reason":"not signed in"}"#)
+        let j = try json(#"{"schemaVersion":1,"allowance":null,"reason":"quota service unavailable"}"#)
         #expect(throws: ProviderError.self) { try MuseProvider.parse(j) }
     }
 }
@@ -98,7 +98,7 @@ private func json(_ s: String) throws -> [String: Any] {
           "dailyQuotaRemainingPercent":70,"weeklyQuotaRemainingPercent":35,
           "dailyQuotaResetAtUnix":"1893456000","weeklyQuotaResetAtUnix":"1893800000"}}}
         """)
-        let s = DevinProvider.parse(j)
+        let s = try DevinProvider.parse(j)
         #expect(s.plan == "Pro")
         #expect(s.windows.map(\.label) == ["Day", "Week"])
         #expect(s.windows.map(\.remainingPercent) == [70, 35])
@@ -265,5 +265,67 @@ private func json(_ s: String) throws -> [String: Any] {
     @Test func defaultsAndMuteKey() {
         #expect(Config.Alerts().effectiveThresholds == [20, 5])
         #expect(AlertPlanner.muteKey(.claude, UsageWindow(label: "5h", remainingPercent: 1, resetsAt: nil)) == "claude/5h")
+    }
+}
+
+
+@Suite struct ReviewFixes {
+    func isNotConfigured(_ body: () throws -> Void) -> Bool {
+        do { try body(); return false } catch ProviderError.notConfigured { return true } catch { return false }
+    }
+
+    @Test func unknownEnvelopesAreErrorsNotEmptySuccess() throws {
+        #expect(throws: ProviderError.self) { try CodexProvider.parse(try json(#"{"error":"temporarily unavailable"}"#)) }
+        #expect(throws: ProviderError.self) { try ClaudeProvider.parse(try json(#"{"error":{"type":"overloaded"}}"#)) }
+        #expect(throws: ProviderError.self) { try DevinProvider.parse(try json(#"{"code":"unauthenticated"}"#)) }
+        // A known envelope with null windows is a real "no limits" answer, not an error.
+        #expect(try ClaudeProvider.parse(try json(#"{"five_hour":null,"seven_day":null}"#)).isEmpty)
+    }
+
+    @Test func museSignedOutJSONIsNotConfigured() throws {
+        let j = try json(#"{"schemaVersion":1,"allowance":null,"reason":"not signed in"}"#)
+        #expect(isNotConfigured { _ = try MuseProvider.parse(j) })
+    }
+
+    @Test func invalidThresholdsAreDropped() {
+        let a = Config.Alerts(thresholds: [1e100, 20, 20, -1, 5, 100])
+        #expect(a.effectiveThresholds == [100, 20, 5])
+        // Would have trapped converting 1e100 to Int.
+        let snap = [ProviderSnapshot(provider: .codex, windows: [UsageWindow(label: "Week", remainingPercent: 3, resetsAt: nil)])]
+        #expect(AlertPlanner.plan(snapshots: snap, alerts: Config.Alerts(thresholds: [1e100, 5]), fired: []).alerts.count == 1)
+        #expect(CodexProvider.windowLabel(1e300) == "Window")
+    }
+
+    @Test func newPeriodRearmsEvenWithoutSeeingTheReset() {
+        let a = Config.Alerts(thresholds: [20])
+        let reset1 = Date(timeIntervalSince1970: 1_893_456_000)
+        func snap(_ rem: Double, _ reset: Date) -> [ProviderSnapshot] {
+            [ProviderSnapshot(provider: .codex, windows: [UsageWindow(label: "Week", remainingPercent: rem, resetsAt: reset)])]
+        }
+        var r = AlertPlanner.plan(snapshots: snap(18, reset1), alerts: a, fired: [])
+        #expect(r.alerts.count == 1)
+        // Same period, reset time jittered by a second: no repeat.
+        r = AlertPlanner.plan(snapshots: snap(15, reset1.addingTimeInterval(1)), alerts: a, fired: r.fired)
+        #expect(r.alerts.isEmpty)
+        // App was closed over the reset; next period is already low: alert again, old key dropped.
+        r = AlertPlanner.plan(snapshots: snap(12, reset1.addingTimeInterval(7 * 86_400)), alerts: a, fired: r.fired)
+        #expect(r.alerts.count == 1)
+        #expect(r.fired.count == 1)
+    }
+
+    @Test func devinTOMLAndServerChecks() {
+        let t = DevinProvider.parseTOML("""
+        # comment
+        [section]
+        windsurf_api_key = "abc" # work account
+        api_server_url = 'https://example.invalid'
+        plain = value # note
+        """)
+        #expect(t["windsurf_api_key"] == "abc")
+        #expect(t["api_server_url"] == "https://example.invalid")
+        #expect(t["plain"] == "value")
+        #expect(DevinProvider.isSafeServer(URL(string: "https://server.example.invalid/x")!))
+        #expect(DevinProvider.isSafeServer(URL(string: "http://localhost:8080/x")!))
+        #expect(!DevinProvider.isSafeServer(URL(string: "http://server.example.invalid/x")!))
     }
 }

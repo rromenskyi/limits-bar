@@ -14,6 +14,8 @@ final class UsageStore {
     private(set) var lastRefresh: Date?
     private(set) var config = Config()
     private(set) var configError: String?
+    /// The file exists but doesn't parse; the last good config stays in use and nothing is saved.
+    private var configLoadFailed = false
 
     private var pollTask: Task<Void, Never>?
     private var rateLimitStreak: [ProviderID: Int] = [:]
@@ -29,9 +31,25 @@ final class UsageStore {
 
     /// Re-read on every refresh, so hand edits to config.json apply without a restart.
     func reloadConfig() {
-        (config, configError) = Config.load()
+        let (loaded, error) = Config.load()
+        configError = error
+        configLoadFailed = error != nil
+        if error == nil { config = loaded }
         let known = Set(config.allProviderIDs)
         snapshots = snapshots.filter { known.contains($0.key) }
+    }
+
+    /// Applies a change on top of the file's current contents (so hand edits made since the last
+    /// refresh survive) and saves. Refuses while the file has a syntax error, so a menu click can't
+    /// replace a broken but recoverable config with defaults.
+    private func mutateConfig(_ change: (inout Config) -> Void) {
+        reloadConfig()
+        guard !configLoadFailed else {
+            configError = L("config.json has an error. Fix it before changing settings here.")
+            return
+        }
+        change(&config)
+        saveConfig()
     }
 
     private func saveConfig() {
@@ -45,16 +63,17 @@ final class UsageStore {
     func isEnabled(_ id: ProviderID) -> Bool { config.isEnabled(id) }
 
     func setEnabled(_ id: ProviderID, _ on: Bool) {
-        var disabled = Set(config.disabled ?? [])
-        if on { disabled.remove(id.id) } else { disabled.insert(id.id) }
-        config.disabled = disabled.isEmpty ? nil : disabled.sorted()
-        saveConfig()
+        mutateConfig { c in
+            var disabled = Set(c.disabled ?? [])
+            if on { disabled.remove(id.id) } else { disabled.insert(id.id) }
+            c.disabled = disabled.isEmpty ? nil : disabled.sorted()
+        }
         if on { Task { await refresh() } }
     }
 
     var menuBarStyle: MenuBarStyle {
         get { MenuBarStyle(rawValue: config.menuBar ?? "") ?? .compact }
-        set { config.menuBar = newValue == .compact ? nil : newValue.rawValue; saveConfig() }
+        set { mutateConfig { $0.menuBar = newValue == .compact ? nil : newValue.rawValue } }
     }
 
     // MARK: Alerts
@@ -88,11 +107,11 @@ final class UsageStore {
     func unmuteAll() { updateAlerts { $0.muted = nil } }
 
     private func updateAlerts(_ change: (inout Config.Alerts) -> Void) {
-        reloadConfig()
-        var a = config.effectiveAlerts
-        change(&a)
-        config.alerts = a == Config.Alerts() ? nil : a
-        saveConfig()
+        mutateConfig { c in
+            var a = c.effectiveAlerts
+            change(&a)
+            c.alerts = a == Config.Alerts() ? nil : a
+        }
     }
 
     func openConfigFile() {

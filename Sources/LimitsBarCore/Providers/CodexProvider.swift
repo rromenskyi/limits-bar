@@ -29,25 +29,28 @@ public struct CodexProvider: UsageProvider {
             }
             req.setValue("application/json", forHTTPHeaderField: "Accept")
             let json = try await HTTP.json(req, provider: "Codex")
-            return Self.parse(json)
+            return try Self.parse(json)
         }
     }
 
-    static func parse(_ json: [String: Any]) -> ProviderSnapshot {
+    static func parse(_ json: [String: Any]) throws -> ProviderSnapshot {
         let plan = (json["plan_type"] as? String)?.capitalized
         var windows: [UsageWindow] = []
-        if let rl = json["rate_limit"] as? [String: Any] {
-            for key in ["primary_window", "secondary_window"] {
-                guard let w = rl[key] as? [String: Any], let used = Num.double(w["used_percent"]) else { continue }
-                let label = Num.double(w["limit_window_seconds"]).map(windowLabel) ?? (key == "primary_window" ? "Short" : "Long")
-                windows.append(.fromUsed(label: label, usedPercent: used, resetsAt: Dates.unixSeconds(w["reset_at"])))
-            }
+        // A 200 without the usage envelope means the API changed or answered with an error object.
+        guard let rl = json["rate_limit"] as? [String: Any] else {
+            throw ProviderError.failed(L("Unexpected response format"))
+        }
+        for key in ["primary_window", "secondary_window"] {
+            guard let w = rl[key] as? [String: Any], let used = Num.double(w["used_percent"]) else { continue }
+            let label = Num.double(w["limit_window_seconds"]).map(windowLabel) ?? (key == "primary_window" ? "Short" : "Long")
+            windows.append(.fromUsed(label: label, usedPercent: used, resetsAt: Dates.unixSeconds(w["reset_at"])))
         }
         return ProviderSnapshot(provider: .codex, plan: plan, windows: windows)
     }
 
     /// 18000 -> "5h", 604800 -> "Week", 86400 -> "Day"
     static func windowLabel(_ seconds: Double) -> String {
+        guard seconds.isFinite, seconds >= 60, seconds < 100 * 365 * 86_400 else { return "Window" }
         switch Int(seconds) {
         case 604_800: return "Week"
         case 86_400: return "Day"

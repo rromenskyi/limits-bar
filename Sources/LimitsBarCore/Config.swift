@@ -47,7 +47,11 @@ public struct Config: Codable, Equatable, Sendable {
         }
 
         public var isEnabled: Bool { enabled ?? true }
-        public var effectiveThresholds: [Double] { (thresholds ?? Self.defaultThresholds).sorted(by: >) }
+        /// Valid levels only (finite, 0...100), highest first, without duplicates.
+        public var effectiveThresholds: [Double] {
+            Array(Set((thresholds ?? Self.defaultThresholds).filter { $0.isFinite && (0...100).contains($0) }))
+                .sorted(by: >)
+        }
     }
 
     public var effectiveAlerts: Alerts { alerts ?? Alerts() }

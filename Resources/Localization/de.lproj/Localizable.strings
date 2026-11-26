@@ -58,3 +58,4 @@
 "Could not save config.json: %@" = "config.json konnte nicht gespeichert werden: %@";
 "Turn On Notifications in System Settings…" = "Mitteilungen in den Systemeinstellungen aktivieren…";
 "Compact" = "Kompakt";
+"config.json has an error. Fix it before changing settings here." = "config.json enthält einen Fehler. Behebe ihn, bevor du hier Einstellungen änderst.";

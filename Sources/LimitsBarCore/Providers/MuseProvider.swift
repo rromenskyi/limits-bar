@@ -25,6 +25,10 @@ public struct MuseProvider: UsageProvider {
     static func parse(_ json: [String: Any]) throws -> ProviderSnapshot {
         guard let allowance = json["allowance"] as? [String: Any] else {
             let reason = json["reason"] as? String ?? json["hint"] as? String ?? "no allowance data"
+            let lower = reason.lowercased()
+            if lower.contains("not signed in") || lower.contains("not logged in") {
+                throw ProviderError.notConfigured(L("Muse is not logged in"))
+            }
             throw ProviderError.failed(Lf("Muse: %@", reason))
         }
         var windows: [UsageWindow] = []

@@ -86,8 +86,9 @@ Mac and calls the same usage endpoints those CLIs call:
 Each token goes only to its own vendor. Nothing is stored, logged, or sent anywhere else. The
 only other network request is the update check against this repository's releases.
 
-Tokens are never refreshed. A refresh can rotate the refresh token and sign the CLI out, so when a
-token has expired the row shows as stale until you next use that CLI.
+LimitsBar never refreshes tokens itself. A refresh can rotate the refresh token and sign the CLI
+out, so when a token has expired the row shows as stale until you next use that CLI. (For Muse,
+LimitsBar runs `muse usage`, and the Muse CLI manages its own sign-in as it always does.)
 
 The endpoints are unofficial and undocumented. A vendor can change them at any time, and the
 affected row then shows an error while the others keep working.
