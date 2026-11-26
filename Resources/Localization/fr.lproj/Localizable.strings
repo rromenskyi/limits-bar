@@ -65,3 +65,10 @@
 "Scoped" = "Spécifique";
 "%dh" = "%d h";
 "%dm" = "%d min";
+
+/* About */
+"About LimitsBar" = "À propos de LimitsBar";
+"Project Page" = "Page du projet";
+"Website" = "Site web";
+"Sponsor on GitHub" = "Soutenir sur GitHub";
+"Third-Party Software" = "Logiciels tiers";

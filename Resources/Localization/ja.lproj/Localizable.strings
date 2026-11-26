@@ -65,3 +65,10 @@
 "Scoped" = "個別";
 "%dh" = "%d時間";
 "%dm" = "%d分";
+
+/* About */
+"About LimitsBar" = "LimitsBar について";
+"Project Page" = "プロジェクトページ";
+"Website" = "Web サイト";
+"Sponsor on GitHub" = "GitHub でスポンサーになる";
+"Third-Party Software" = "サードパーティ製ソフトウェア";

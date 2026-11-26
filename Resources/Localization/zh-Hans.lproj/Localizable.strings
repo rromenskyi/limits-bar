@@ -65,3 +65,10 @@
 "Scoped" = "单独";
 "%dh" = "%d 小时";
 "%dm" = "%d 分钟";
+
+/* About */
+"About LimitsBar" = "关于 LimitsBar";
+"Project Page" = "项目主页";
+"Website" = "网站";
+"Sponsor on GitHub" = "在 GitHub 上赞助";
+"Third-Party Software" = "第三方软件";

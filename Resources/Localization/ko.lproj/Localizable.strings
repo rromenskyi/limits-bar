@@ -65,3 +65,10 @@
 "Scoped" = "개별";
 "%dh" = "%d시간";
 "%dm" = "%d분";
+
+/* About */
+"About LimitsBar" = "LimitsBar에 관하여";
+"Project Page" = "프로젝트 페이지";
+"Website" = "웹사이트";
+"Sponsor on GitHub" = "GitHub에서 후원하기";
+"Third-Party Software" = "타사 소프트웨어";

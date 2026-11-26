@@ -65,3 +65,10 @@
 "Scoped" = "Отдельный";
 "%dh" = "%d ч";
 "%dm" = "%d мин";
+
+/* About */
+"About LimitsBar" = "О программе LimitsBar";
+"Project Page" = "Страница проекта";
+"Website" = "Сайт";
+"Sponsor on GitHub" = "Поддержать на GitHub";
+"Third-Party Software" = "Стороннее ПО";

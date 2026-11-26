@@ -149,6 +149,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         login.state = store.launchAtLogin ? .on : .off
         menu.addItem(login)
         menu.addItem(item(L("Edit config.json…"), #selector(editConfig)))
+        menu.addItem(.separator())
+        menu.addItem(item(L("About LimitsBar"), #selector(showAbout)))
         if let updater {
             let mi = NSMenuItem(title: L("Check for Updates…"),
                                 action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "")
@@ -240,6 +242,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     @objc private func toggleLaunchAtLogin() { store.launchAtLogin.toggle() }
     @objc private func editConfig() { store.openConfigFile() }
+    @objc private func showAbout() { AboutPanel.show() }
     @objc private func quit() { NSApp.terminate(nil) }
 }
 
@@ -298,5 +301,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.alerts = alerts
         controller = StatusItemController(store: store, alerts: alerts, updater: updater)
         store.start()
+        AboutPanel.captureIfRequested()
     }
 }

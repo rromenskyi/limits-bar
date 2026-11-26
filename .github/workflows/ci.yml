@@ -31,6 +31,9 @@ jobs:
           plutil -lint "$APP/Contents/Info.plist"
           test -d "$APP/Contents/Frameworks/Sparkle.framework"
           test -f "$APP/Contents/Resources/AppIcon.icns"
+          test -f "$APP/Contents/Resources/LICENSE"
+          diff THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/THIRD_PARTY_NOTICES.md" \
+            || { echo "error: THIRD_PARTY_NOTICES.md is stale; run ./scripts/make-notices.sh > THIRD_PARTY_NOTICES.md" >&2; exit 1; }
           want="$(ls -d Resources/Localization/*.lproj | wc -l | tr -d ' ')"
           have="$(ls -d "$APP"/Contents/Resources/*.lproj | wc -l | tr -d ' ')"
           [[ "$have" == "$want" ]] || { echo "error: $have of $want localizations bundled" >&2; exit 1; }

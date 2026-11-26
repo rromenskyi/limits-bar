@@ -48,7 +48,7 @@ and two bars per provider: the short window on top, the tightest longer window b
 
 Click the item, with either button, for the menu: every window with how much is left and when it
 resets, then **Refresh Now**, **Providers**, **Menu Bar Style**, **Alerts**, **Launch at Login**,
-**Edit config.json…**, **Check for Updates…** and **Quit**.
+**Edit config.json…**, **About LimitsBar** (links, sponsor page, licenses), **Check for Updates…** and **Quit**.
 
 ### Alerts
 
@@ -184,4 +184,12 @@ local addition, use a custom provider instead.
 
 ## License
 
-MIT
+MIT, see [LICENSE](LICENSE). Third-party software shipped in the app (Sparkle and what it bundles)
+is listed with its licenses in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); the app shows the
+same text under **About LimitsBar**. If a dependency changes, regenerate it with
+`./scripts/make-notices.sh > THIRD_PARTY_NOTICES.md` (CI checks it).
+
+Claude, Codex, Devin and Muse are trademarks of their respective owners. LimitsBar is an
+independent project and is not affiliated with or endorsed by them.
+
+If LimitsBar is useful to you, you can [sponsor it on GitHub](https://github.com/sponsors/rromenskyi).
