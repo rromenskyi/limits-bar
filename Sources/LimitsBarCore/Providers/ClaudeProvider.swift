@@ -18,7 +18,7 @@ public struct ClaudeProvider: UsageProvider {
         await snapshot {
             let creds = try await readCredentials()
             if let exp = creds.expiresAt, exp < Date() {
-                throw ProviderError.stale("Token expired. Use Claude Code once to refresh it.")
+                throw ProviderError.stale(L("Token expired. Use Claude Code once to refresh it."))
             }
             var req = URLRequest(url: Self.usageURL)
             req.setValue("Bearer \(creds.accessToken)", forHTTPHeaderField: "Authorization")
@@ -49,7 +49,7 @@ public struct ClaudeProvider: UsageProvider {
             data = d
         }
         guard let data else {
-            throw ProviderError.notConfigured("No Claude Code login found")
+            throw ProviderError.notConfigured(L("No Claude Code login found"))
         }
         return try Self.parseCredentials(data)
     }
@@ -58,7 +58,7 @@ public struct ClaudeProvider: UsageProvider {
         let obj = try JSONObject.parse(data)
         guard let oauth = obj["claudeAiOauth"] as? [String: Any],
               let token = oauth["accessToken"] as? String, !token.isEmpty else {
-            throw ProviderError.notConfigured("Claude Code is not logged in with a subscription")
+            throw ProviderError.notConfigured(L("Claude Code is not logged in with a subscription"))
         }
         let tier = (oauth["rateLimitTier"] as? String).flatMap(prettyTier)
         let sub = (oauth["subscriptionType"] as? String)?.capitalized

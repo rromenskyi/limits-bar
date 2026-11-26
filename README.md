@@ -8,14 +8,38 @@ A small macOS menu bar app that shows how much of your coding-agent subscription
 - **Devin** (Devin CLI): daily and weekly quota
 
 Any other service can be added with a small script (see [Custom providers](#custom-providers)).
+Providers whose CLI or login isn't found are hidden automatically, so you only see what you use.
+
+## Download
+
+Get `LimitsBar.dmg` from the [latest release](https://github.com/rromenskyi/limits-bar/releases/latest),
+open it and drag LimitsBar to Applications. It is signed with a Developer ID and notarized by
+Apple, and it updates itself (Sparkle). Requires macOS 14 or later.
+
+## Using it
 
 The menu bar shows a letter and two mini bars per provider: the top bar is the short window
-(5 hours, or a day), the bottom bar is the tightest longer window (usually the week). Bars use the
-menu bar text color and turn orange below 30% and red below 10%. A plain-number style
-(`C80 X12 M86 D100`) is available in Settings. Click the item for every window with reset
-countdowns.
+(5 hours, or a day), the bottom bar is the tightest longer window (usually the week). A plain
+number style (`C80 X12 M86 D100`) is available under **Menu Bar Style**.
 
-Providers whose CLI or login isn't found are hidden automatically, so you only see what you use.
+Click the item, with either button, for the menu: every window with how much is left and when it
+resets, then **Refresh Now**, **Providers**, **Menu Bar Style**, **Alerts**, **Launch at Login**,
+**Edit config.json…**, **Check for Updates…** and **Quit**.
+
+### Alerts
+
+LimitsBar sends a notification when a window drops to 20% and again at 5% (change the levels in
+**Alerts**). Each notification has two actions: **Got It** dismisses it, and **Don't Remind
+Again** mutes that window (for example Codex · Week) for good. **Alerts → Unmute All** brings
+muted ones back. An alert fires once per crossing and re-arms when the window resets.
+
+To keep alerts on screen until you act on them, set LimitsBar's notification style to **Alerts**
+in System Settings → Notifications.
+
+### Languages
+
+English, Russian, Ukrainian, German, French, Spanish, Brazilian Portuguese, Japanese, Simplified
+Chinese and Korean, following your macOS language.
 
 ## How it works
 
@@ -29,7 +53,8 @@ Mac and calls the same usage endpoints those CLIs call:
 | Muse | none; runs `muse usage --json` | handled by the CLI |
 | Devin | `~/.local/share/devin/credentials.toml` | `GetUserStatus` on the server named in that file |
 
-Each token goes only to its own vendor. Nothing is stored, logged, or sent anywhere else.
+Each token goes only to its own vendor. Nothing is stored, logged, or sent anywhere else. The
+only other network request is the update check against this repository's releases.
 
 Tokens are never refreshed. A refresh can rotate the refresh token and sign the CLI out, so when a
 token has expired the row shows as stale until you next use that CLI.
@@ -37,33 +62,20 @@ token has expired the row shows as stale until you next use that CLI.
 The endpoints are unofficial and undocumented. A vendor can change them at any time, and the
 affected row then shows an error while the others keep working.
 
-Usage is checked every 5 minutes, and the refresh button checks right away.
-
-## Install
-
-Requires macOS 14 or later and Swift 6 (Xcode 16 or later).
-
-```sh
-git clone https://github.com/rromenskyi/limits-bar.git
-cd limits-bar
-./scripts/build-app.sh
-cp -R build/LimitsBar.app /Applications/
-open /Applications/LimitsBar.app
-```
-
-The app is ad-hoc signed. If Gatekeeper complains, right-click the app and choose Open.
+Usage is checked every 5 minutes, and when you open the menu if the numbers are older than two
+minutes. If a vendor answers HTTP 429, that provider is left alone for 10 minutes and its last
+numbers stay on screen.
 
 ## Configuration
 
-Settings, at the bottom of the panel, let you hide providers, pick the menu bar style, and turn on
-launch at login. Provider and style choices are saved to `~/.config/limits-bar/config.json`
-(`$XDG_CONFIG_HOME` is respected). You can also edit the file by hand; it is re-read on every
-refresh. All fields are optional:
+Menu choices are saved to `~/.config/limits-bar/config.json` (`$XDG_CONFIG_HOME` is respected).
+You can also edit the file by hand; it is re-read on every refresh. All fields are optional:
 
 ```json
 {
   "menuBar": "bars",
   "disabled": ["devin"],
+  "alerts": { "enabled": true, "thresholds": [20, 5], "muted": ["codex/Week"] },
   "custom": [
     { "id": "example", "name": "Example", "tag": "E",
       "command": ["~/bin/example-quota"], "timeout": 30 }
@@ -73,6 +85,8 @@ refresh. All fields are optional:
 
 - `menuBar`: `"bars"` (default) or `"numbers"`
 - `disabled`: provider ids to hide (`claude`, `codex`, `muse`, `devin`, or a custom id)
+- `alerts`: `enabled` (default `true`), `thresholds` in percent left (default `[20, 5]`), and
+  `muted` windows as `"provider/Window"`
 - `custom`: extra providers, described below
 
 ## Custom providers
@@ -94,20 +108,35 @@ Each window takes `remainingPercent` or `usedPercent`, and `resetsAt` as an ISO 
 unix seconds. Print `{"error": "..."}` to show an error. List windows shortest first: the first
 one becomes the top menu bar bar. See [`examples/custom-provider.sh`](examples/custom-provider.sh).
 
-## Command line
+## Building from source
+
+Requires Swift 6 (Xcode 16 or later).
 
 ```sh
-swift run LimitsBar --dump              # print normalized usage as JSON
-swift run LimitsBar --snapshot out.png  # render the panel and the menu bar item to PNGs
-swift test
+git clone https://github.com/rromenskyi/limits-bar.git
+cd limits-bar
+./scripts/build-app.sh            # build/LimitsBar.app, ad-hoc signed
+open build/LimitsBar.app
 ```
+
+Other commands:
+
+```sh
+swift test
+swift run LimitsBar --dump              # print normalized usage as JSON
+swift run LimitsBar --snapshot out.png  # render the menu rows and the menu bar item to PNGs
+```
+
+Releases are described in [RELEASING.md](RELEASING.md).
 
 ## Adding a provider
 
 For a built-in provider, implement `UsageProvider` in `Sources/LimitsBarCore/Providers/`. Return
 windows as remaining percent with an optional reset date, then register it in
-`Providers.builtIns()` and `ProviderID.builtIns`. Pull requests for other services are welcome,
-but please test against a real account. For a quick local addition, use a custom provider instead.
+`Providers.builtIns()` and `ProviderID.builtIns`. User-facing strings go through `L(...)` and
+need an entry in every `Resources/Localization/*.lproj/Localizable.strings` (a test checks this).
+Pull requests for other services are welcome, but please test against a real account. For a quick
+local addition, use a custom provider instead.
 
 ## License
 

@@ -18,16 +18,16 @@ public struct DevinProvider: UsageProvider {
     public func fetch() async -> ProviderSnapshot {
         await snapshot {
             guard let text = try? String(contentsOf: Self.credentialsURL, encoding: .utf8) else {
-                throw ProviderError.notConfigured("No Devin CLI login found")
+                throw ProviderError.notConfigured(L("No Devin CLI login found"))
             }
             let creds = Self.parseTOML(text)
             guard let key = creds["windsurf_api_key"], !key.isEmpty else {
-                throw ProviderError.notConfigured("Devin CLI is not logged in")
+                throw ProviderError.notConfigured(L("Devin CLI is not logged in"))
             }
             let server = creds["api_server_url"] ?? "https://server.codeium.com"
             guard let url = URL(string: server.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                                 + "/exa.seat_management_pb.SeatManagementService/GetUserStatus") else {
-                throw ProviderError.failed("Bad Devin server URL")
+                throw ProviderError.failed(L("Bad Devin server URL"))
             }
             var req = URLRequest(url: url)
             req.httpMethod = "POST"

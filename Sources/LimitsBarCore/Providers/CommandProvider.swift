@@ -26,25 +26,25 @@ public struct CommandProvider: UsageProvider {
     public func fetch() async -> ProviderSnapshot {
         await snapshot {
             guard let first = config.command.first, !first.isEmpty else {
-                throw ProviderError.failed("No command set in config.json")
+                throw ProviderError.failed(L("No command set in config.json"))
             }
             let expanded = (first as NSString).expandingTildeInPath
             let exe: URL
             if expanded.contains("/") {
                 exe = URL(fileURLWithPath: expanded)
                 guard FileManager.default.isExecutableFile(atPath: exe.path) else {
-                    throw ProviderError.notConfigured("\(first) not found")
+                    throw ProviderError.notConfigured(Lf("%@ not found", first))
                 }
             } else if let found = Env.which(expanded) {
                 exe = found
             } else {
-                throw ProviderError.notConfigured("\(first) not found")
+                throw ProviderError.notConfigured(Lf("%@ not found", first))
             }
             let args = config.command.dropFirst().map { ($0 as NSString).expandingTildeInPath }
             let r = try await Shell.run(exe, Array(args), timeout: config.timeout ?? 60)
             guard let json = try? JSONObject.parse(r.stdout) else {
                 let detail = r.stderr.split(separator: "\n").last.map(String.init) ?? "exit \(r.status)"
-                throw ProviderError.failed("\(id.displayName) command printed no JSON: \(detail)")
+                throw ProviderError.failed(Lf("%@ command printed no JSON: %@", id.displayName, detail))
             }
             return try Self.parse(json, id: id)
         }

@@ -15,8 +15,8 @@ enum MenuBarStyle: String, CaseIterable {
 /// Draws the menu bar item: per provider a letter and two stacked mini bars
 /// (top: shortest window, bottom: tightest of the longer windows).
 ///
-/// Bars use the menu bar text color and only turn orange/red when a window runs low, so the item
-/// looks native in light and dark menu bars. The image redraws itself on appearance changes.
+/// Per the HIG for menu bar extras, this is a template image (black and clear only), so the system
+/// tints it for light and dark menu bars and for the selected state. Colors live in the menu.
 enum MenuBarIcon {
     struct Item {
         var tag: String
@@ -43,7 +43,7 @@ enum MenuBarIcon {
               + CGFloat(items.count - 1) * itemGap
 
         let image = NSImage(size: NSSize(width: width, height: height), flipped: true) { _ in
-            let label = NSColor.labelColor
+            let label = NSColor.black
             if items.isEmpty {
                 let dot = NSBezierPath(ovalIn: NSRect(x: height / 2 - 2, y: height / 2 - 2, width: 4, height: 4))
                 label.withAlphaComponent(0.5).setFill()
@@ -73,31 +73,19 @@ enum MenuBarIcon {
             }
             return true
         }
-        image.isTemplate = false
-        // Redraw on every use so labelColor resolves against the menu bar's current appearance.
-        image.cacheMode = .never
+        image.isTemplate = true
         return image
     }
 
     private static func drawBar(x: CGFloat, y: CGFloat, value: Double?, alpha: CGFloat, height h: CGFloat = barHeight) {
         let r = h / 2
         let track = NSRect(x: x, y: y, width: barWidth, height: h)
-        let low = (value ?? 1) < 0.30
-        (low ? color(for: value ?? 0).withAlphaComponent(0.35 * alpha)
-             : NSColor.labelColor.withAlphaComponent(0.22 * alpha)).setFill()
+        NSColor.black.withAlphaComponent(0.25 * alpha).setFill()
         NSBezierPath(roundedRect: track, xRadius: r, yRadius: r).fill()
         guard let value else { return }
         let w = max(h, barWidth * CGFloat(min(1, max(0, value))))
         let fill = NSRect(x: x, y: y, width: value <= 0 ? 0 : w, height: h)
-        color(for: value).withAlphaComponent(alpha).setFill()
+        NSColor.black.withAlphaComponent(alpha).setFill()
         NSBezierPath(roundedRect: fill, xRadius: r, yRadius: r).fill()
-    }
-
-    static func color(for value: Double) -> NSColor {
-        switch value {
-        case ..<0.10: .systemRed
-        case ..<0.30: .systemOrange
-        default: NSColor.labelColor.withAlphaComponent(0.85)
-        }
     }
 }

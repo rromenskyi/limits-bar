@@ -1,0 +1,98 @@
+name: Release
+
+# Push a tag vX.Y.Z to build, sign, notarize and publish LimitsBar.dmg plus the Sparkle
+# appcast.xml to the GitHub release. Needs the secrets listed in RELEASING.md; without them
+# the job explains what's missing and stops without failing.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    env:
+      HAS_SECRETS: ${{ secrets.DEVELOPER_ID_P12_BASE64 != '' && secrets.NOTARY_KEY_P8_BASE64 != '' && secrets.SPARKLE_PRIVATE_KEY != '' }}
+    steps:
+      - name: Check secrets
+        if: env.HAS_SECRETS != 'true'
+        run: echo "::notice::Signing secrets are not set (see RELEASING.md); skipping the release build."
+      - uses: actions/checkout@v4
+        if: env.HAS_SECRETS == 'true'
+      - name: Select Xcode
+        if: env.HAS_SECRETS == 'true'
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+      - name: Set up signing
+        if: env.HAS_SECRETS == 'true'
+        env:
+          P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          umask 077
+          printf '%s' "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/developer_id.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/developer_id.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          rm -f "$RUNNER_TEMP/developer_id.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN" | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -1)"
+          [[ -n "$IDENTITY" ]] || { echo "error: no Developer ID Application identity in the certificate" >&2; exit 1; }
+          printf '%s' "$NOTARY_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/notary_key.p8"
+          {
+            echo "SIGN_IDENTITY=$IDENTITY"
+            echo "SIGNING_KEYCHAIN=$KEYCHAIN"
+            echo "NOTARY_KEY_PATH=$RUNNER_TEMP/notary_key.p8"
+            echo "NOTARY_KEY_ID=$NOTARY_KEY_ID"
+            echo "NOTARY_ISSUER_ID=$NOTARY_ISSUER_ID"
+          } >> "$GITHUB_ENV"
+      - name: Test
+        if: env.HAS_SECRETS == 'true'
+        run: swift test
+      - name: Build and sign LimitsBar.app
+        if: env.HAS_SECRETS == 'true'
+        run: ./scripts/build-app.sh
+      - name: Build DMG
+        if: env.HAS_SECRETS == 'true'
+        run: ./scripts/build-dmg.sh
+      - name: Notarize DMG
+        if: env.HAS_SECRETS == 'true'
+        run: ./scripts/notarize.sh build/LimitsBar.dmg
+      # After stapling, because stapling changes the bytes Sparkle signs.
+      - name: Sign update and write appcast
+        if: env.HAS_SECRETS == 'true'
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: ./scripts/make-appcast.sh
+      - name: Publish release
+        if: env.HAS_SECRETS == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" build/LimitsBar.dmg build/appcast.xml --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" build/LimitsBar.dmg build/appcast.xml \
+              --title "LimitsBar $VERSION" --generate-notes
+          fi
+      - name: Remove signing keychain
+        if: always() && env.HAS_SECRETS == 'true'
+        run: |
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/notary_key.p8"

@@ -6,6 +6,7 @@ import Foundation
 ///     {
 ///       "menuBar": "bars",
 ///       "disabled": ["devin"],
+///       "alerts": { "enabled": true, "thresholds": [20, 5], "muted": ["codex/Week"] },
 ///       "custom": [
 ///         { "id": "gemini", "name": "Gemini", "tag": "G",
 ///           "command": ["~/bin/gemini-quota"], "timeout": 30 }
@@ -16,19 +17,46 @@ public struct Config: Codable, Equatable, Sendable {
     public var menuBar: String?
     /// Provider ids to hide. Providers whose CLI isn't installed are hidden automatically.
     public var disabled: [String]?
+    /// Low-limit notifications.
+    public var alerts: Alerts?
     /// Extra providers backed by a command that prints usage JSON.
     public var custom: [CustomProvider]
 
-    public init(menuBar: String? = nil, disabled: [String]? = nil, custom: [CustomProvider] = []) {
+    public init(menuBar: String? = nil, disabled: [String]? = nil, alerts: Alerts? = nil,
+                custom: [CustomProvider] = []) {
         self.menuBar = menuBar
         self.disabled = disabled
+        self.alerts = alerts
         self.custom = custom
     }
+
+    public struct Alerts: Codable, Equatable, Sendable {
+        public static let defaultThresholds: [Double] = [20, 5]
+
+        /// Defaults to true.
+        public var enabled: Bool?
+        /// Remaining-percent levels that trigger a notification. Defaults to [20, 5].
+        public var thresholds: [Double]?
+        /// "provider/window" keys (e.g. "codex/Week") that should never notify.
+        public var muted: [String]?
+
+        public init(enabled: Bool? = nil, thresholds: [Double]? = nil, muted: [String]? = nil) {
+            self.enabled = enabled
+            self.thresholds = thresholds
+            self.muted = muted
+        }
+
+        public var isEnabled: Bool { enabled ?? true }
+        public var effectiveThresholds: [Double] { (thresholds ?? Self.defaultThresholds).sorted(by: >) }
+    }
+
+    public var effectiveAlerts: Alerts { alerts ?? Alerts() }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         menuBar = try c.decodeIfPresent(String.self, forKey: .menuBar)
         disabled = try c.decodeIfPresent([String].self, forKey: .disabled)
+        alerts = try c.decodeIfPresent(Alerts.self, forKey: .alerts)
         custom = try c.decodeIfPresent([CustomProvider].self, forKey: .custom) ?? []
     }
 
@@ -77,7 +105,7 @@ public struct Config: Codable, Equatable, Sendable {
         do {
             return (try JSONDecoder().decode(Config.self, from: data), nil)
         } catch {
-            return (Config(), "config.json could not be read: \(error.localizedDescription)")
+            return (Config(), Lf("config.json could not be read: %@", error.localizedDescription))
         }
     }
 

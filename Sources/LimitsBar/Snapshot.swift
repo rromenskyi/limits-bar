@@ -1,6 +1,22 @@
 import AppKit
 import SwiftUI
 
+/// Approximates the menu's usage rows for `--snapshot`.
+struct MenuPreview: View {
+    let store: UsageStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(store.visible, id: \.self) { ProviderMenuRow(store: store, id: $0) }
+            Divider()
+            UpdatedRow(store: store)
+        }
+        .padding(14)
+        .frame(width: StatusItemController.menuWidth)
+        .background(.background)
+    }
+}
+
 @MainActor
 enum Snapshot {
     /// Writes the panel to `url` and the menu bar item (light and dark, 2x) next to it as `<name>-menubar.png`.
@@ -9,7 +25,7 @@ enum Snapshot {
         let store = UsageStore(autoStart: false)
         await store.refresh()
 
-        let host = NSHostingView(rootView: UsagePanel(store: store).background(.background))
+        let host = NSHostingView(rootView: MenuPreview(store: store))
         host.frame.size = host.fittingSize
         let window = NSWindow(contentRect: host.frame, styleMask: .borderless, backing: .buffered, defer: false)
         window.contentView = host
@@ -35,10 +51,15 @@ enum Snapshot {
             let y = CGFloat(rows.count - 1 - i) * rowH
             bg.setFill()
             NSRect(x: 0, y: y, width: icon.size.width + pad * 2, height: rowH).fill()
-            NSAppearance(named: name)!.performAsCurrentDrawingAppearance {
-                icon.draw(in: NSRect(x: pad, y: y + (rowH - icon.size.height) / 2,
-                                     width: icon.size.width, height: icon.size.height))
+            // Template image: tint it the way the system does (black on light, white on dark).
+            let tinted = NSImage(size: icon.size, flipped: false) { r in
+                icon.draw(in: r)
+                (name == .darkAqua ? NSColor.white : NSColor.black).setFill()
+                r.fill(using: .sourceAtop)
+                return true
             }
+            tinted.draw(in: NSRect(x: pad, y: y + (rowH - icon.size.height) / 2,
+                                   width: icon.size.width, height: icon.size.height))
         }
         NSGraphicsContext.restoreGraphicsState()
         let menuURL = URL(fileURLWithPath: url.deletingPathExtension().path + "-menubar.png")
@@ -58,5 +79,37 @@ enum Snapshot {
                 NSLog("LimitsBar: captured status item, appearance %@", window.effectiveAppearance.name.rawValue)
             }
         }
+    }
+
+    /// Debug hook: with LIMITSBAR_CAPTURE_MENU=<file.png> set, clicks the status item, saves the
+    /// open menu, then closes it. Verifies that a click really opens the menu.
+    static func captureMenuIfRequested(button: NSStatusBarButton?, menu: NSMenu) {
+        guard let path = ProcessInfo.processInfo.environment["LIMITSBAR_CAPTURE_MENU"], let button else { return }
+        nonisolated(unsafe) let menu = menu
+        for (i, delay) in [1.5, 6.0].enumerated() {
+            let shot = i == 0 ? path.replacingOccurrences(of: ".png", with: "-early.png") : path
+            let timer = Timer(timeInterval: delay, repeats: false) { _ in
+                MainActor.assumeIsolated {
+                    var saved = false
+                    for window in NSApp.windows where window.isVisible && String(describing: type(of: window)).contains("Menu") {
+                        guard let view = window.contentView?.superview ?? window.contentView,
+                              let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { continue }
+                        view.cacheDisplay(in: view.bounds, to: rep)
+                        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: shot))
+                        saved = true
+                    }
+                    NSLog("LimitsBar: menu capture at %.1fs saved=%d windows=%@", delay, saved ? 1 : 0,
+                          NSApp.windows.filter(\.isVisible).map { String(describing: type(of: $0)) }.joined(separator: ","))
+                    if i == 1 { menu.cancelTracking() }
+                }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+        }
+        // Click from a run loop timer, like a real event. Clicking from a main-queue block would
+        // keep the main queue (and so the main actor) busy for as long as the menu is open.
+        nonisolated(unsafe) let clickTarget = button
+        RunLoop.main.add(Timer(timeInterval: 0.3, repeats: false) { _ in
+            MainActor.assumeIsolated { clickTarget.performClick(nil) }
+        }, forMode: .common)
     }
 }

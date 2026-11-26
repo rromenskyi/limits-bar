@@ -2,117 +2,6 @@ import AppKit
 import LimitsBarCore
 import SwiftUI
 
-struct LimitsBarApp: App {
-    @State private var store = UsageStore()
-
-    var body: some Scene {
-        MenuBarExtra {
-            UsagePanel(store: store)
-        } label: {
-            switch store.menuBarStyle {
-            case .bars:
-                Image(nsImage: MenuBarIcon.image(for: store.menuBarItems))
-                    .accessibilityLabel(store.accessibilityText)
-            case .numbers:
-                Text(store.menuBarText).monospacedDigit()
-            }
-        }
-        .menuBarExtraStyle(.window)
-    }
-}
-
-struct UsagePanel: View {
-    @Bindable var store: UsageStore
-    @State private var showSettings = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            header
-            if store.visible.isEmpty {
-                Text(store.snapshots.isEmpty ? "Checking…" : "No supported CLIs found. See Settings.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-            if let err = store.configError {
-                Label(err, systemImage: "exclamationmark.triangle")
-                    .font(.caption).foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            ForEach(store.visible, id: \.self) { id in
-                ProviderCard(id: id, snapshot: store.snapshots[id])
-            }
-            Divider()
-            if showSettings { settings; Divider() }
-            footer
-        }
-        .padding(14)
-        .frame(width: 320)
-    }
-
-    private var header: some View {
-        HStack {
-            Text("Limits").font(.headline)
-            Spacer()
-            if let t = store.lastRefresh {
-                Text(t, format: .dateTime.hour().minute())
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Button {
-                Task { await store.refresh() }
-            } label: {
-                if store.isRefreshing {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Image(systemName: "arrow.clockwise")
-                }
-            }
-            .buttonStyle(.borderless)
-            .help("Refresh now")
-            .disabled(store.isRefreshing)
-        }
-    }
-
-    private var settings: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(store.allProviders, id: \.self) { id in
-                HStack {
-                    Toggle(id.displayName, isOn: Binding(
-                        get: { store.isEnabled(id) },
-                        set: { store.setEnabled(id, $0) }))
-                    if store.isMissing(id) {
-                        Text("not found").font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            }
-            Divider()
-            Picker("Menu bar", selection: Binding(
-                get: { store.menuBarStyle },
-                set: { store.menuBarStyle = $0 })) {
-                ForEach(MenuBarStyle.allCases, id: \.self) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            Toggle("Launch at login", isOn: Binding(
-                get: { store.launchAtLogin },
-                set: { store.launchAtLogin = $0 }))
-            Button("Edit config.json…") { store.openConfigFile() }
-                .buttonStyle(.link)
-                .font(.caption)
-        }
-        .toggleStyle(.checkbox)
-    }
-
-    private var footer: some View {
-        HStack {
-            Button(showSettings ? "Done" : "Settings") { showSettings.toggle() }
-            Spacer()
-            Button("Quit") { NSApplication.shared.terminate(nil) }
-        }
-        .buttonStyle(.borderless)
-        .font(.callout)
-    }
-}
-
 struct ProviderCard: View {
     let id: ProviderID
     let snapshot: ProviderSnapshot?
@@ -126,7 +15,7 @@ struct ProviderCard: View {
                 }
                 Spacer()
                 if let s = snapshot, s.status != .ok, !s.windows.isEmpty {
-                    Text("as of \(s.fetchedAt.formatted(.dateTime.hour().minute()))")
+                    Text(Lf("as of %@", s.fetchedAt.formatted(.dateTime.hour().minute())))
                         .font(.caption2).foregroundStyle(.secondary)
                 }
             }
@@ -141,10 +30,10 @@ struct ProviderCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if s.windows.isEmpty, s.status == .ok {
-                    Text("No limits reported").font(.caption).foregroundStyle(.secondary)
+                    Text(L("No limits reported")).font(.caption).foregroundStyle(.secondary)
                 }
             } else {
-                Text("Checking…").font(.caption).foregroundStyle(.secondary)
+                Text(L("Checking…")).font(.caption).foregroundStyle(.secondary)
             }
         }
     }
@@ -172,9 +61,9 @@ struct WindowRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack {
-                Text(window.label).font(.caption)
+                Text(WindowLabel.display(window.label)).font(.caption)
                 Spacer()
-                Text("\(Int(window.remainingPercent.rounded()))% left")
+                Text(Lf("%d%% left", Int(window.remainingPercent.rounded())))
                     .font(.caption.monospacedDigit().weight(.medium))
                 if let r = window.resetsAt {
                     Text("· \(resetText(r))")
@@ -202,11 +91,6 @@ struct WindowRow: View {
     }
 
     private func resetText(_ date: Date) -> String {
-        let s = Int(date.timeIntervalSinceNow)
-        if s <= 0 { return "resetting" }
-        let d = s / 86_400, h = (s % 86_400) / 3600, m = (s % 3600) / 60
-        if d > 0 { return "\(d)d \(h)h" }
-        if h > 0 { return "\(h)h \(m)m" }
-        return "\(m)m"
+        date.timeIntervalSinceNow <= 0 ? L("resetting") : ResetFormat.short(date)
     }
 }

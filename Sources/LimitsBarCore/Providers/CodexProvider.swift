@@ -15,12 +15,12 @@ public struct CodexProvider: UsageProvider {
             let home = Env.value("CODEX_HOME").map { URL(fileURLWithPath: $0) }
                 ?? Env.home.appendingPathComponent(".codex")
             guard let data = try? Data(contentsOf: home.appendingPathComponent("auth.json")) else {
-                throw ProviderError.notConfigured("No Codex login found")
+                throw ProviderError.notConfigured(L("No Codex login found"))
             }
             let auth = try JSONObject.parse(data)
             guard let tokens = auth["tokens"] as? [String: Any],
                   let token = tokens["access_token"] as? String, !token.isEmpty else {
-                throw ProviderError.notConfigured("Codex is not signed in with ChatGPT (API-key mode has no plan limits)")
+                throw ProviderError.notConfigured(L("Codex is not signed in with ChatGPT (API-key mode has no plan limits)"))
             }
             var req = URLRequest(url: Self.usageURL)
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

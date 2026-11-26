@@ -215,3 +215,55 @@ private func json(_ s: String) throws -> [String: Any] {
         if case .notConfigured = s.status {} else { Issue.record("expected notConfigured, got \(s.status)") }
     }
 }
+
+@Suite struct AlertPlannerTests {
+    func snap(_ remaining: Double, label: String = "Week", status: ProviderStatus = .ok) -> [ProviderSnapshot] {
+        [ProviderSnapshot(provider: .codex, windows: [UsageWindow(label: label, remainingPercent: remaining, resetsAt: nil)],
+                          status: status)]
+    }
+
+    @Test func firesOncePerCrossingAndRearms() {
+        let a = Config.Alerts(thresholds: [20, 5])
+        var r = AlertPlanner.plan(snapshots: snap(50), alerts: a, fired: [])
+        #expect(r.alerts.isEmpty)
+        r = AlertPlanner.plan(snapshots: snap(18), alerts: a, fired: r.fired)
+        #expect(r.alerts.map(\.threshold) == [20])
+        r = AlertPlanner.plan(snapshots: snap(15), alerts: a, fired: r.fired)
+        #expect(r.alerts.isEmpty)
+        r = AlertPlanner.plan(snapshots: snap(4), alerts: a, fired: r.fired)
+        #expect(r.alerts.map(\.threshold) == [5])
+        // Window resets: both thresholds re-arm.
+        r = AlertPlanner.plan(snapshots: snap(100), alerts: a, fired: r.fired)
+        #expect(r.fired.isEmpty)
+        r = AlertPlanner.plan(snapshots: snap(19), alerts: a, fired: r.fired)
+        #expect(r.alerts.map(\.threshold) == [20])
+    }
+
+    @Test func bigDropSendsOnlyLowest() {
+        let r = AlertPlanner.plan(snapshots: snap(3), alerts: Config.Alerts(thresholds: [20, 5]), fired: [])
+        #expect(r.alerts.map(\.threshold) == [5])
+        #expect(r.fired.count == 2)
+    }
+
+    @Test func mutedAndDisabledStaySilentButTrack() {
+        let muted = AlertPlanner.plan(snapshots: snap(3), alerts: Config.Alerts(muted: ["codex/Week"]), fired: [])
+        #expect(muted.alerts.isEmpty)
+        #expect(!muted.fired.isEmpty)
+        let off = AlertPlanner.plan(snapshots: snap(3), alerts: Config.Alerts(enabled: false), fired: [])
+        #expect(off.alerts.isEmpty)
+        // Turning alerts back on later doesn't replay an old crossing.
+        let on = AlertPlanner.plan(snapshots: snap(3), alerts: Config.Alerts(), fired: off.fired)
+        #expect(on.alerts.isEmpty)
+    }
+
+    @Test func staleDataIsIgnored() {
+        let r = AlertPlanner.plan(snapshots: snap(3, status: .stale("expired")), alerts: Config.Alerts(), fired: [])
+        #expect(r.alerts.isEmpty)
+        #expect(r.fired.isEmpty)
+    }
+
+    @Test func defaultsAndMuteKey() {
+        #expect(Config.Alerts().effectiveThresholds == [20, 5])
+        #expect(AlertPlanner.muteKey(.claude, UsageWindow(label: "5h", remainingPercent: 1, resetsAt: nil)) == "claude/5h")
+    }
+}

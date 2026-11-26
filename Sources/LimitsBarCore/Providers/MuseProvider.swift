@@ -8,15 +8,15 @@ public struct MuseProvider: UsageProvider {
     public func fetch() async -> ProviderSnapshot {
         await snapshot {
             guard let muse = Env.which("muse") else {
-                throw ProviderError.notConfigured("muse CLI not found")
+                throw ProviderError.notConfigured(L("muse CLI not found"))
             }
             let r = try await Shell.run(muse, ["usage", "--json"], timeout: 90)
             guard let json = try? JSONObject.parse(r.stdout) else {
                 let detail = r.stderr.split(separator: "\n").last.map(String.init) ?? "exit \(r.status)"
                 if detail.localizedCaseInsensitiveContains("not logged in") {
-                    throw ProviderError.notConfigured("Muse is not logged in")
+                    throw ProviderError.notConfigured(L("Muse is not logged in"))
                 }
-                throw ProviderError.failed("muse usage failed: \(detail)")
+                throw ProviderError.failed(Lf("muse usage failed: %@", detail))
             }
             return try Self.parse(json)
         }
@@ -25,7 +25,7 @@ public struct MuseProvider: UsageProvider {
     static func parse(_ json: [String: Any]) throws -> ProviderSnapshot {
         guard let allowance = json["allowance"] as? [String: Any] else {
             let reason = json["reason"] as? String ?? json["hint"] as? String ?? "no allowance data"
-            throw ProviderError.failed("Muse: \(reason)")
+            throw ProviderError.failed(Lf("Muse: %@", reason))
         }
         var windows: [UsageWindow] = []
         for (key, label) in [("window", "Window"), ("weekly", "Week")] {

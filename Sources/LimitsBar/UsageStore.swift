@@ -16,6 +16,8 @@ final class UsageStore {
     private(set) var configError: String?
 
     private var pollTask: Task<Void, Never>?
+    /// Called after every refresh with the fresh snapshots (alerts, open menu).
+    var onRefresh: [@MainActor ([ProviderSnapshot]) -> Void] = []
 
     init(autoStart: Bool = true) {
         reloadConfig()
@@ -33,7 +35,7 @@ final class UsageStore {
 
     private func saveConfig() {
         do { try config.save(); configError = nil } catch {
-            configError = "Could not save config.json: \(error.localizedDescription)"
+            configError = Lf("Could not save config.json: %@", error.localizedDescription)
         }
     }
 
@@ -52,6 +54,44 @@ final class UsageStore {
     var menuBarStyle: MenuBarStyle {
         get { MenuBarStyle(rawValue: config.menuBar ?? "") ?? .bars }
         set { config.menuBar = newValue == .bars ? nil : newValue.rawValue; saveConfig() }
+    }
+
+    // MARK: Alerts
+
+    var alertsEnabled: Bool {
+        get { config.effectiveAlerts.isEnabled }
+        set { updateAlerts { $0.enabled = newValue ? nil : false } }
+    }
+
+    func hasThreshold(_ t: Double) -> Bool { config.effectiveAlerts.effectiveThresholds.contains(t) }
+
+    func toggleThreshold(_ t: Double) {
+        updateAlerts { a in
+            var set = Set(a.effectiveThresholds)
+            if set.contains(t) { set.remove(t) } else { set.insert(t) }
+            let sorted = set.sorted(by: >)
+            a.thresholds = sorted == Config.Alerts.defaultThresholds ? nil : sorted
+        }
+    }
+
+    var mutedAlerts: [String] { config.effectiveAlerts.muted ?? [] }
+
+    func mute(_ key: String) {
+        updateAlerts { a in
+            var m = Set(a.muted ?? [])
+            m.insert(key)
+            a.muted = m.sorted()
+        }
+    }
+
+    func unmuteAll() { updateAlerts { $0.muted = nil } }
+
+    private func updateAlerts(_ change: (inout Config.Alerts) -> Void) {
+        reloadConfig()
+        var a = config.effectiveAlerts
+        change(&a)
+        config.alerts = a == Config.Alerts() ? nil : a
+        saveConfig()
     }
 
     func openConfigFile() {
@@ -99,7 +139,11 @@ final class UsageStore {
         isRefreshing = true
         defer { isRefreshing = false }
         reloadConfig()
-        let active = Providers.all(config: config).filter { config.isEnabled($0.id) }
+        let now = Date()
+        let active = Providers.all(config: config).filter { p in
+            // Respect a rate-limit backoff: keep the last snapshot instead of asking again.
+            config.isEnabled(p.id) && !(snapshots[p.id]?.retryAfter.map { $0 > now } ?? false)
+        }
         let results = await withTaskGroup(of: ProviderSnapshot.self) { group in
             for p in active { group.addTask { await p.fetch() } }
             var out: [ProviderSnapshot] = []
@@ -118,6 +162,7 @@ final class UsageStore {
         }
         lastRefresh = Date()
         NSLog("LimitsBar: refreshed: %@", menuBarText)
+        for handler in onRefresh { handler(results) }
         Snapshot.captureStatusItemIfRequested()
     }
 
@@ -150,7 +195,7 @@ final class UsageStore {
 
     var accessibilityText: String {
         let parts = visible.map { id in
-            "\(id.displayName) \(snapshots[id]?.minRemaining.map { "\(Int($0.rounded())) percent left" } ?? "unknown")"
+            "\(id.displayName) \(snapshots[id]?.minRemaining.map { Lf("%d%% left", Int($0.rounded())) } ?? "?")"
         }
         return parts.isEmpty ? "LimitsBar" : parts.joined(separator: ", ")
     }

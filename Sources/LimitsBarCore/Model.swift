@@ -97,15 +97,20 @@ public struct ProviderSnapshot: Sendable, Equatable, Encodable {
     public var windows: [UsageWindow]
     public var status: ProviderStatus
     public var fetchedAt: Date
+    /// Set when the vendor rate limited the check; don't ask again before this time.
+    public var retryAfter: Date?
 
     public init(provider: ProviderID, plan: String? = nil, windows: [UsageWindow] = [],
-                status: ProviderStatus = .ok, fetchedAt: Date = Date()) {
+                status: ProviderStatus = .ok, fetchedAt: Date = Date(), retryAfter: Date? = nil) {
         self.provider = provider
         self.plan = plan
         self.windows = windows
         self.status = status
         self.fetchedAt = fetchedAt
+        self.retryAfter = retryAfter
     }
+
+    public static let rateLimitBackoff: TimeInterval = 10 * 60
 
     /// The tightest window, which is what actually limits you right now.
     public var minRemaining: Double? {
@@ -122,10 +127,11 @@ public enum ProviderError: Error, CustomStringConvertible {
     case notConfigured(String)
     case stale(String)
     case failed(String)
+    case rateLimited(String)
 
     public var description: String {
         switch self {
-        case .notConfigured(let m), .stale(let m), .failed(let m): m
+        case .notConfigured(let m), .stale(let m), .failed(let m), .rateLimited(let m): m
         }
     }
 }
@@ -140,6 +146,9 @@ extension UsageProvider {
             case .notConfigured(let m): return ProviderSnapshot(provider: id, status: .notConfigured(m))
             case .stale(let m): return ProviderSnapshot(provider: id, status: .stale(m))
             case .failed(let m): return ProviderSnapshot(provider: id, status: .error(m))
+            case .rateLimited(let m):
+                return ProviderSnapshot(provider: id, status: .error(m),
+                                        retryAfter: Date().addingTimeInterval(ProviderSnapshot.rateLimitBackoff))
             }
         } catch {
             return ProviderSnapshot(provider: id, status: .error(error.localizedDescription))

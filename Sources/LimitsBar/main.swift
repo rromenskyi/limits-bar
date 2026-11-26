@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import LimitsBarCore
 
@@ -27,4 +28,8 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
     exit(0)
 }
 
-LimitsBarApp.main()
+let app = NSApplication.shared
+let delegate = AppDelegate()
+app.delegate = delegate
+app.setActivationPolicy(.accessory)
+app.run()

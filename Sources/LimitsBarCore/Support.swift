@@ -63,7 +63,7 @@ enum Shell {
                 DispatchQueue.global().async { errData = err.fileHandleForReading.readDataToEndOfFile(); group.leave() }
 
                 do { try p.run() } catch {
-                    cont.resume(throwing: ProviderError.failed("Could not run \(executable.lastPathComponent): \(error.localizedDescription)"))
+                    cont.resume(throwing: ProviderError.failed(Lf("Could not run %@: %@", executable.lastPathComponent, error.localizedDescription)))
                     return
                 }
                 let timer = DispatchWorkItem { if p.isRunning { p.terminate() } }
@@ -72,7 +72,7 @@ enum Shell {
                 timer.cancel()
                 group.wait()
                 if p.terminationReason == .uncaughtSignal {
-                    cont.resume(throwing: ProviderError.failed("\(executable.lastPathComponent) timed out"))
+                    cont.resume(throwing: ProviderError.failed(Lf("%@ timed out", executable.lastPathComponent)))
                     return
                 }
                 cont.resume(returning: ShellResult(status: p.terminationStatus, stdout: outData,
@@ -96,9 +96,9 @@ enum HTTP {
         let code = (response as? HTTPURLResponse)?.statusCode ?? 0
         switch code {
         case 200..<300: break
-        case 401, 403: throw ProviderError.stale("\(provider) rejected the token (HTTP \(code)). Use the \(provider) CLI once to refresh it.")
-        case 429: throw ProviderError.failed("\(provider) is rate limiting usage checks (HTTP 429)")
-        default: throw ProviderError.failed("\(provider) usage request failed (HTTP \(code))")
+        case 401, 403: throw ProviderError.stale(Lf("%@ rejected the token (HTTP %d). Use the %@ CLI once to refresh it.", provider, code, provider))
+        case 429: throw ProviderError.rateLimited(Lf("%@ is rate limiting usage checks (HTTP 429)", provider))
+        default: throw ProviderError.failed(Lf("%@ usage request failed (HTTP %d)", provider, code))
         }
         return try JSONObject.parse(data)
     }
@@ -107,7 +107,7 @@ enum HTTP {
 enum JSONObject {
     static func parse(_ data: Data) throws -> [String: Any] {
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw ProviderError.failed("Unexpected response format")
+            throw ProviderError.failed(L("Unexpected response format"))
         }
         return obj
     }
