@@ -173,7 +173,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         sub.addItem(check)
         let install = item(L("Download and Install Automatically"), #selector(toggleAutoInstall))
         install.state = updater.automaticallyDownloadsUpdates ? .on : .off
-        install.isEnabled = updater.automaticallyChecksForUpdates && updater.allowsAutomaticUpdates
+        install.isEnabled = updater.automaticallyDownloadsUpdates
+            || (updater.automaticallyChecksForUpdates && updater.allowsAutomaticUpdates)
         sub.addItem(install)
         root.submenu = sub
         return root

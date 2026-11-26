@@ -1,12 +1,25 @@
 #!/usr/bin/env bash
-# Prints THIRD_PARTY_NOTICES.md from the resolved dependencies' own license files.
-# The app bundle and the repo copy both come from here; CI fails if the repo copy is stale.
+# Writes THIRD_PARTY_NOTICES.md from the resolved dependencies' own license files (to stdout, or
+# atomically to the given file). The app bundle and the repo copy both come from here; CI fails if
+# the repo copy is stale.
 #
-#   ./scripts/make-notices.sh > THIRD_PARTY_NOTICES.md
+#   ./scripts/make-notices.sh THIRD_PARTY_NOTICES.md
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-[[ -d .build/checkouts/Sparkle ]] || swift package resolve >/dev/null
+if [[ $# -gt 0 ]]; then
+  OUT="$1"; TMP="$(mktemp "${OUT}.XXXXXX")"
+  trap 'rm -f "$TMP"' EXIT
+  "$0" > "$TMP"
+  mv "$TMP" "$OUT"; trap - EXIT
+  exit 0
+fi
+
+# The license must come from the pinned revision, not an older checkout.
+SPARKLE_REVISION="$(plutil -extract pins.0.state.revision raw -o - Package.resolved)"
+checkout_matches() { [[ "$(git -C .build/checkouts/Sparkle rev-parse HEAD 2>/dev/null)" == "$SPARKLE_REVISION" ]]; }
+checkout_matches || swift package resolve >/dev/null
+checkout_matches || { echo "error: .build/checkouts/Sparkle is not at $SPARKLE_REVISION" >&2; exit 1; }
 SPARKLE_VERSION="$(plutil -extract pins.0.state.version raw -o - Package.resolved)"
 [[ "$(plutil -extract pins.0.identity raw -o - Package.resolved)" == "sparkle" ]] \
   || { echo "error: Package.resolved changed; update make-notices.sh" >&2; exit 1; }

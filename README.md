@@ -187,7 +187,7 @@ local addition, use a custom provider instead.
 MIT, see [LICENSE](LICENSE). Third-party software shipped in the app (Sparkle and what it bundles)
 is listed with its licenses in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); the app shows the
 same text under **About LimitsBar**. If a dependency changes, regenerate it with
-`./scripts/make-notices.sh > THIRD_PARTY_NOTICES.md` (CI checks it).
+`./scripts/make-notices.sh THIRD_PARTY_NOTICES.md` (CI checks it).
 
 Claude, Codex, Devin and Muse are trademarks of their respective owners. LimitsBar is an
 independent project and is not affiliated with or endorsed by them.

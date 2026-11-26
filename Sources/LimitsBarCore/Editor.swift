@@ -29,7 +29,8 @@ public enum EditorChoice {
         if let p = preferred?.trimmingCharacters(in: .whitespaces), !p.isEmpty {
             let expanded = (p as NSString).expandingTildeInPath
             if expanded.hasPrefix("/") {
-                if appExists(expanded) { return URL(fileURLWithPath: expanded) }
+                // Only an .app bundle: a CLI shim like /opt/homebrew/bin/code can't be opened as one.
+                if expanded.hasSuffix(".app"), appExists(expanded) { return URL(fileURLWithPath: expanded) }
             } else if let byID = appForBundleID(p) {
                 return byID
             } else {

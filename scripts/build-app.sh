@@ -35,7 +35,7 @@ cp -R "$SPARKLE" "$APP/Contents/Frameworks/"
 cp -R Resources/Localization/*.lproj "$APP/Contents/Resources/"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp LICENSE "$APP/Contents/Resources/LICENSE"
-./scripts/make-notices.sh > "$APP/Contents/Resources/THIRD_PARTY_NOTICES.md"
+./scripts/make-notices.sh "$APP/Contents/Resources/THIRD_PARTY_NOTICES.md"
 LOCALIZATIONS="$(for d in Resources/Localization/*.lproj; do n="$(basename "$d" .lproj)"; printf '        <string>%s</string>\n' "$n"; done)"
 # The binary links @rpath/Sparkle.framework; point rpath at Contents/Frameworks like Xcode would.
 install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/LimitsBar"

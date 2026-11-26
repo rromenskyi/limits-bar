@@ -118,8 +118,10 @@ final class UsageStore {
     }
 
     func openConfigFile() {
+        reloadConfig()  // pick up an "editor" added by hand since the last refresh
         let url = Config.fileURL
         if !FileManager.default.fileExists(atPath: url.path) { saveConfig() }
+        guard FileManager.default.fileExists(atPath: url.path) else { return }  // demo mode doesn't create it
         let ws = NSWorkspace.shared
         let app = EditorChoice.resolve(
             preferred: config.editor,
@@ -127,7 +129,10 @@ final class UsageStore {
             appExists: { FileManager.default.fileExists(atPath: $0) },
             plainTextApp: ws.urlForApplication(toOpen: .plainText))
         if let app {
-            ws.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+            ws.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration()) { _, error in
+                guard error != nil else { return }
+                Task { @MainActor in NSWorkspace.shared.open(url) }  // e.g. the editor was removed
+            }
         } else {
             ws.open(url)
         }

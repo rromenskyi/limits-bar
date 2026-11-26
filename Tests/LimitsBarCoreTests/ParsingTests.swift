@@ -428,4 +428,12 @@ private func json(_ s: String) throws -> [String: Any] {
         // Unknown editor falls back to the usual order.
         #expect(pick("Nonexistent Editor") == "Visual Studio Code.app")
     }
+
+    @Test func pathMustBeAnAppBundle() {
+        // A CLI shim exists on disk but can't be launched as an app; fall back instead of a silent no-op.
+        let shim = "/opt/homebrew/bin/code"
+        let r = EditorChoice.resolve(preferred: shim, appForBundleID: { installed[$0] },
+                                     appExists: { $0 == shim || paths.contains($0) }, plainTextApp: textEdit)
+        #expect(r?.lastPathComponent == "Visual Studio Code.app")
+    }
 }
