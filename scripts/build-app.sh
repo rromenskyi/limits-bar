@@ -24,6 +24,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Framewor
 cp "$BIN_DIR/LimitsBar" "$APP/Contents/MacOS/LimitsBar"
 cp -R "$SPARKLE" "$APP/Contents/Frameworks/"
 cp -R Resources/Localization/*.lproj "$APP/Contents/Resources/"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 LOCALIZATIONS="$(for d in Resources/Localization/*.lproj; do n="$(basename "$d" .lproj)"; printf '        <string>%s</string>\n' "$n"; done)"
 # The binary links @rpath/Sparkle.framework; point rpath at Contents/Frameworks like Xcode would.
 install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/LimitsBar"
@@ -37,6 +38,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleDisplayName</key><string>LimitsBar</string>
     <key>CFBundleIdentifier</key><string>io.github.rromenskyi.limitsbar</string>
     <key>CFBundleExecutable</key><string>LimitsBar</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
     <key>CFBundleLocalizations</key>

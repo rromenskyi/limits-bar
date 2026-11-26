@@ -10,6 +10,8 @@ A small macOS menu bar app that shows how much of your coding-agent subscription
 Any other service can be added with a small script (see [Custom providers](#custom-providers)).
 Providers whose CLI or login isn't found are hidden automatically, so you only see what you use.
 
+Website: https://rromenskyi.github.io/limits-bar/
+
 ## Download
 
 Get `LimitsBar.dmg` from the [latest release](https://github.com/rromenskyi/limits-bar/releases/latest),
@@ -129,7 +131,15 @@ swift run LimitsBar --dump              # print normalized usage as JSON
 swift run LimitsBar --snapshot out.png  # render the menu rows and the menu bar item to PNGs
 ```
 
-Releases are described in [RELEASING.md](RELEASING.md).
+Releases are described in [RELEASING.md](RELEASING.md). The website lives in `docs/`; its
+screenshots come from demo data (`LIMITSBAR_DEMO=1`, no real accounts):
+
+```sh
+./scripts/build-app.sh
+./scripts/site-captures.sh build/site-raw
+swift scripts/site-compose.swift build/site-raw docs/assets
+swift scripts/make-icon.swift      # app icon and site icons
+```
 
 ## Adding a provider
 

@@ -163,6 +163,7 @@ public enum Providers {
 
     /// Built-ins plus custom command providers from the config, in display order.
     public static func all(config: Config) -> [any UsageProvider] {
-        builtIns() + config.custom.map(CommandProvider.init)
+        if DemoProvider.isEnabled { return DemoProvider.all() }
+        return builtIns() + config.custom.map(CommandProvider.init)
     }
 }

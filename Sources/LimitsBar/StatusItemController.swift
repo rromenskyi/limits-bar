@@ -26,6 +26,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         super.init()
         menu.delegate = self
         menu.autoenablesItems = false
+        menu.appearance = NSApp.appearance  // nil unless LIMITSBAR_APPEARANCE forces one
         statusItem.menu = menu
         store.onRefresh.append { [weak self] _ in
             // Fresh numbers arrived while the menu is open: rebuild it in place.
@@ -270,6 +271,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             : nil
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Screenshot helper: LIMITSBAR_APPEARANCE=light|dark forces the app's appearance.
+        switch ProcessInfo.processInfo.environment["LIMITSBAR_APPEARANCE"] {
+        case "light": NSApp.appearance = NSAppearance(named: .aqua)
+        case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
+        default: break
+        }
         let store = UsageStore(autoStart: false)
         let alerts = AlertNotifier(store: store)
         store.onRefresh.append { [weak alerts] snapshots in alerts?.process(snapshots) }
