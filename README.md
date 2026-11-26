@@ -1,4 +1,22 @@
-# LimitsBar
+<p align="center">
+  <img src="docs/assets/icon-512.png" width="112" alt="LimitsBar icon">
+</p>
+
+<h1 align="center">LimitsBar</h1>
+
+<p align="center">
+  Claude, Codex, Muse and Devin limits in your Mac's menu bar.<br>
+  <a href="https://github.com/rromenskyi/limits-bar/releases/latest/download/LimitsBar.dmg"><b>Download</b></a> ·
+  <a href="https://rromenskyi.github.io/limits-bar/">Website</a> ·
+  <a href="https://github.com/rromenskyi/limits-bar/releases">Releases</a>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.png">
+    <img src="docs/assets/hero-light.png" width="760" alt="LimitsBar's menu open under its menu bar item">
+  </picture>
+</p>
 
 A small macOS menu bar app that shows how much of your coding-agent subscription limits is left:
 
@@ -9,8 +27,6 @@ A small macOS menu bar app that shows how much of your coding-agent subscription
 
 Any other service can be added with a small script (see [Custom providers](#custom-providers)).
 Providers whose CLI or login isn't found are hidden automatically, so you only see what you use.
-
-Website: https://rromenskyi.github.io/limits-bar/
 
 ## Download
 
@@ -25,6 +41,10 @@ filled to what's left of its tightest window. Four providers take about 20 pt, s
 visible next to the camera notch. Under **Menu Bar Style** you can switch to **Bars** (a letter
 and two bars per provider: the short window on top, the week below) or **Numbers**
 (`C80 X12 M86 D100`). Hover the item for the numbers.
+
+| Compact (default) | Bars | Numbers |
+|:---:|:---:|:---:|
+| <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/style-compact-dark.png"><img src="docs/assets/style-compact-light.png" height="30" alt="Compact style"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/style-bars-dark.png"><img src="docs/assets/style-bars-light.png" height="30" alt="Bars style"></picture> | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/style-numbers-dark.png"><img src="docs/assets/style-numbers-light.png" height="30" alt="Numbers style"></picture> |
 
 Click the item, with either button, for the menu: every window with how much is left and when it
 resets, then **Refresh Now**, **Providers**, **Menu Bar Style**, **Alerts**, **Launch at Login**,
@@ -44,6 +64,12 @@ in System Settings → Notifications.
 
 English, Russian, Ukrainian, German, French, Spanish, Brazilian Portuguese, Japanese, Simplified
 Chinese and Korean, following your macOS language.
+
+<p>
+  <img src="docs/assets/lang-ru.png" width="32%" alt="Menu in Russian">
+  <img src="docs/assets/lang-ja.png" width="32%" alt="Menu in Japanese">
+  <img src="docs/assets/lang-de.png" width="32%" alt="Menu in German">
+</p>
 
 ## How it works
 
