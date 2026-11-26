@@ -17,6 +17,8 @@ public struct Config: Codable, Equatable, Sendable {
     public var menuBar: String?
     /// Provider ids to hide. Providers whose CLI isn't installed are hidden automatically.
     public var disabled: [String]?
+    /// App that "Edit config.json…" opens: a name ("Sublime Text"), bundle id or path to the .app.
+    public var editor: String?
     /// Low-limit notifications.
     public var alerts: Alerts?
     /// Extra providers backed by a command that prints usage JSON.
@@ -59,6 +61,7 @@ public struct Config: Codable, Equatable, Sendable {
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         menuBar = try c.decodeIfPresent(String.self, forKey: .menuBar)
+        editor = try c.decodeIfPresent(String.self, forKey: .editor)
         disabled = try c.decodeIfPresent([String].self, forKey: .disabled)
         alerts = try c.decodeIfPresent(Alerts.self, forKey: .alerts)
         custom = try c.decodeIfPresent([CustomProvider].self, forKey: .custom) ?? []

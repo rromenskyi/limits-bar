@@ -3,6 +3,7 @@ import Foundation
 import LimitsBarCore
 import Observation
 import ServiceManagement
+import UniformTypeIdentifiers
 
 @MainActor
 @Observable
@@ -118,7 +119,17 @@ final class UsageStore {
     func openConfigFile() {
         let url = Config.fileURL
         if !FileManager.default.fileExists(atPath: url.path) { saveConfig() }
-        NSWorkspace.shared.open(url)
+        let ws = NSWorkspace.shared
+        let app = EditorChoice.resolve(
+            preferred: config.editor,
+            appForBundleID: { ws.urlForApplication(withBundleIdentifier: $0) },
+            appExists: { FileManager.default.fileExists(atPath: $0) },
+            plainTextApp: ws.urlForApplication(toOpen: .plainText))
+        if let app {
+            ws.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+        } else {
+            ws.open(url)
+        }
     }
 
     /// True when the provider's CLI or login wasn't found on this machine.

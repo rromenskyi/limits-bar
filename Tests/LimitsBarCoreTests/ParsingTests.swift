@@ -401,3 +401,31 @@ private func json(_ s: String) throws -> [String: Any] {
         #expect(WindowLabel.display("Week · Opus") == "Week · Opus")
     }
 }
+
+@Suite struct EditorChoiceTests {
+    let installed: [String: URL] = [
+        "com.sublimetext.4": URL(fileURLWithPath: "/Applications/Sublime Text.app"),
+        "com.microsoft.VSCode": URL(fileURLWithPath: "/Applications/Visual Studio Code.app"),
+    ]
+    let paths: Set<String> = ["/Applications/Sublime Text.app", "/Applications/Visual Studio Code.app"]
+    let textEdit = URL(fileURLWithPath: "/System/Applications/TextEdit.app")
+
+    func pick(_ preferred: String?, editors: [String: URL]? = nil) -> String? {
+        let e = editors ?? installed
+        return EditorChoice.resolve(preferred: preferred, appForBundleID: { e[$0] }, appExists: { paths.contains($0) },
+                                    plainTextApp: textEdit, home: URL(fileURLWithPath: "/Users/test"))?.lastPathComponent
+    }
+
+    @Test func prefersACodeEditorOverTheJSONDefault() {
+        #expect(pick(nil) == "Visual Studio Code.app")
+        #expect(pick(nil, editors: [:]) == "TextEdit.app")
+    }
+
+    @Test func configEditorByNameIdOrPath() {
+        #expect(pick("Sublime Text") == "Sublime Text.app")
+        #expect(pick("com.sublimetext.4") == "Sublime Text.app")
+        #expect(pick("/Applications/Sublime Text.app") == "Sublime Text.app")
+        // Unknown editor falls back to the usual order.
+        #expect(pick("Nonexistent Editor") == "Visual Studio Code.app")
+    }
+}
