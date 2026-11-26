@@ -35,7 +35,7 @@ enum Snapshot {
             try? rep.representation(using: .png, properties: [:])?.write(to: url)
         }
 
-        let icon = MenuBarIcon.image(for: store.menuBarItems)
+        let icon = MenuBarIcon.compactImage(for: store.menuBarItems)
         let scale: CGFloat = 2, pad: CGFloat = 8, rowH: CGFloat = 24
         let size = NSSize(width: (icon.size.width + pad * 2) * scale, height: rowH * 2 * scale)
         guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height),

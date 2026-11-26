@@ -2,10 +2,16 @@ import AppKit
 import LimitsBarCore
 
 enum MenuBarStyle: String, CaseIterable {
-    case bars, numbers
+    /// One vertical level bar per provider, about 20 pt for four providers (default; fits next to a notch).
+    case compact
+    /// A letter and two horizontal bars per provider.
+    case bars
+    /// "C80 X12 M86 D100".
+    case numbers
 
     var title: String {
         switch self {
+        case .compact: "Compact"
         case .bars: "Bars"
         case .numbers: "Numbers"
         }
@@ -34,6 +40,36 @@ enum MenuBarIcon {
     static let itemGap: CGFloat = 7
 
     static var font: NSFont { .systemFont(ofSize: 10, weight: .semibold) }
+
+    // Compact style: vertical level bars, filled from the bottom by the tightest window.
+    static let levelWidth: CGFloat = 3.5
+    static let levelHeight: CGFloat = 14
+    static let levelGap: CGFloat = 2.5
+
+    static func compactImage(for items: [Item]) -> NSImage {
+        let n = CGFloat(max(1, items.count))
+        let width = n * levelWidth + (n - 1) * levelGap
+        let image = NSImage(size: NSSize(width: width, height: height), flipped: true) { _ in
+            let top = (height - levelHeight) / 2
+            let r = levelWidth / 2
+            for (i, item) in items.enumerated() {
+                let alpha: CGFloat = item.dimmed ? 0.45 : 1
+                let x = CGFloat(i) * (levelWidth + levelGap)
+                NSColor.black.withAlphaComponent(0.25 * alpha).setFill()
+                NSBezierPath(roundedRect: NSRect(x: x, y: top, width: levelWidth, height: levelHeight),
+                             xRadius: r, yRadius: r).fill()
+                let values = [item.short, item.long].compactMap { $0 }
+                guard let value = values.min(), value > 0 else { continue }
+                let h = max(levelWidth, levelHeight * CGFloat(min(1, value)))
+                NSColor.black.withAlphaComponent(alpha).setFill()
+                NSBezierPath(roundedRect: NSRect(x: x, y: top + levelHeight - h, width: levelWidth, height: h),
+                             xRadius: r, yRadius: r).fill()
+            }
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
 
     static func image(for items: [Item]) -> NSImage {
         let attrs: [NSAttributedString.Key: Any] = [.font: font]

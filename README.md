@@ -18,9 +18,11 @@ Apple, and it updates itself (Sparkle). Requires macOS 14 or later.
 
 ## Using it
 
-The menu bar shows a letter and two mini bars per provider: the top bar is the short window
-(5 hours, or a day), the bottom bar is the tightest longer window (usually the week). A plain
-number style (`C80 X12 M86 D100`) is available under **Menu Bar Style**.
+The menu bar shows one small level bar per provider, in the order Claude, Codex, Muse, Devin,
+filled to what's left of its tightest window. Four providers take about 20 pt, so the item stays
+visible next to the camera notch. Under **Menu Bar Style** you can switch to **Bars** (a letter
+and two bars per provider: the short window on top, the week below) or **Numbers**
+(`C80 X12 M86 D100`). Hover the item for the numbers.
 
 Click the item, with either button, for the menu: every window with how much is left and when it
 resets, then **Refresh Now**, **Providers**, **Menu Bar Style**, **Alerts**, **Launch at Login**,
@@ -63,8 +65,8 @@ The endpoints are unofficial and undocumented. A vendor can change them at any t
 affected row then shows an error while the others keep working.
 
 Usage is checked every 5 minutes, and when you open the menu if the numbers are older than two
-minutes. If a vendor answers HTTP 429, that provider is left alone for 10 minutes and its last
-numbers stay on screen.
+minutes. If a vendor answers HTTP 429, that provider is left alone for 10 minutes, doubling on
+each further 429 up to an hour, and its last numbers stay on screen.
 
 ## Configuration
 
@@ -83,7 +85,7 @@ You can also edit the file by hand; it is re-read on every refresh. All fields a
 }
 ```
 
-- `menuBar`: `"bars"` (default) or `"numbers"`
+- `menuBar`: `"compact"` (default), `"bars"` or `"numbers"`
 - `disabled`: provider ids to hide (`claude`, `codex`, `muse`, `devin`, or a custom id)
 - `alerts`: `enabled` (default `true`), `thresholds` in percent left (default `[20, 5]`), and
   `muted` windows as `"provider/Window"`
@@ -105,8 +107,8 @@ arguments; `~` is expanded, and a bare name is looked up on `PATH`. The output l
 ```
 
 Each window takes `remainingPercent` or `usedPercent`, and `resetsAt` as an ISO 8601 string or
-unix seconds. Print `{"error": "..."}` to show an error. List windows shortest first: the first
-one becomes the top menu bar bar. See [`examples/custom-provider.sh`](examples/custom-provider.sh).
+unix seconds. Print `{"error": "..."}` to show an error. List windows shortest first: in the
+Bars style the first one is the top bar. See [`examples/custom-provider.sh`](examples/custom-provider.sh).
 
 ## Building from source
 

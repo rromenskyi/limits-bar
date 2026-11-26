@@ -4,7 +4,7 @@ import Foundation
 /// (or `$XDG_CONFIG_HOME/limits-bar/config.json`). Every field is optional.
 ///
 ///     {
-///       "menuBar": "bars",
+///       "menuBar": "compact",
 ///       "disabled": ["devin"],
 ///       "alerts": { "enabled": true, "thresholds": [20, 5], "muted": ["codex/Week"] },
 ///       "custom": [
@@ -13,7 +13,7 @@ import Foundation
 ///       ]
 ///     }
 public struct Config: Codable, Equatable, Sendable {
-    /// "bars" (default) or "numbers".
+    /// "compact" (default), "bars" or "numbers".
     public var menuBar: String?
     /// Provider ids to hide. Providers whose CLI isn't installed are hidden automatically.
     public var disabled: [String]?

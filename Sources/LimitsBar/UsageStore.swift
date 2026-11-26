@@ -16,6 +16,7 @@ final class UsageStore {
     private(set) var configError: String?
 
     private var pollTask: Task<Void, Never>?
+    private var rateLimitStreak: [ProviderID: Int] = [:]
     /// Called after every refresh with the fresh snapshots (alerts, open menu).
     var onRefresh: [@MainActor ([ProviderSnapshot]) -> Void] = []
 
@@ -52,8 +53,8 @@ final class UsageStore {
     }
 
     var menuBarStyle: MenuBarStyle {
-        get { MenuBarStyle(rawValue: config.menuBar ?? "") ?? .bars }
-        set { config.menuBar = newValue == .bars ? nil : newValue.rawValue; saveConfig() }
+        get { MenuBarStyle(rawValue: config.menuBar ?? "") ?? .compact }
+        set { config.menuBar = newValue == .compact ? nil : newValue.rawValue; saveConfig() }
     }
 
     // MARK: Alerts
@@ -151,6 +152,15 @@ final class UsageStore {
             return out
         }
         for var s in results {
+            // Consecutive 429s back off exponentially: 10, 20, 40, then 60 minutes.
+            if s.retryAfter != nil {
+                let streak = (rateLimitStreak[s.provider] ?? 0) + 1
+                rateLimitStreak[s.provider] = streak
+                let backoff = min(60 * 60, ProviderSnapshot.rateLimitBackoff * pow(2, Double(streak - 1)))
+                s.retryAfter = Date().addingTimeInterval(backoff)
+            } else {
+                rateLimitStreak[s.provider] = nil
+            }
             // A failed check keeps the last known numbers, marked with the error, rather than blanking the row.
             if s.windows.isEmpty, let old = snapshots[s.provider], !old.windows.isEmpty,
                s.status != .ok, !Self.isMissingStatus(s.status) {

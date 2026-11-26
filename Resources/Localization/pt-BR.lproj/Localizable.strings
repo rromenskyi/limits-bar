@@ -57,3 +57,4 @@
 "config.json could not be read: %@" = "Não foi possível ler o config.json: %@";
 "Could not save config.json: %@" = "Não foi possível salvar o config.json: %@";
 "Turn On Notifications in System Settings…" = "Ativar notificações nos Ajustes do Sistema…";
+"Compact" = "Compacto";

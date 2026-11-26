@@ -50,9 +50,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private func render() {
         guard let button = statusItem.button else { return }
         switch store.menuBarStyle {
-        case .bars:
+        case .compact, .bars:
             button.title = ""
-            button.image = MenuBarIcon.image(for: store.menuBarItems)
+            button.image = store.menuBarStyle == .compact
+                ? MenuBarIcon.compactImage(for: store.menuBarItems)
+                : MenuBarIcon.image(for: store.menuBarItems)
             button.imagePosition = .imageOnly
         case .numbers:
             button.image = nil
@@ -62,6 +64,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             ])
         }
         button.setAccessibilityLabel(store.accessibilityText)
+        button.toolTip = store.accessibilityText
     }
 
     // MARK: - Menu
