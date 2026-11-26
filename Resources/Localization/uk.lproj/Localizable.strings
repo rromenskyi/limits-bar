@@ -56,3 +56,4 @@
 "Unexpected response format" = "Неочікуваний формат відповіді";
 "config.json could not be read: %@" = "Не вдалося прочитати config.json: %@";
 "Could not save config.json: %@" = "Не вдалося зберегти config.json: %@";
+"Turn On Notifications in System Settings…" = "Увімкнути сповіщення в Системних параметрах…";

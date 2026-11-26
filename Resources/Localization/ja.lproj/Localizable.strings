@@ -56,3 +56,4 @@
 "Unexpected response format" = "予期しない応答形式です";
 "config.json could not be read: %@" = "config.json を読み込めませんでした：%@";
 "Could not save config.json: %@" = "config.json を保存できませんでした：%@";
+"Turn On Notifications in System Settings…" = "システム設定で通知をオンにする…";

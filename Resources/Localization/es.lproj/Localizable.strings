@@ -56,3 +56,4 @@
 "Unexpected response format" = "Formato de respuesta inesperado";
 "config.json could not be read: %@" = "No se pudo leer config.json: %@";
 "Could not save config.json: %@" = "No se pudo guardar config.json: %@";
+"Turn On Notifications in System Settings…" = "Activar notificaciones en Ajustes del Sistema…";

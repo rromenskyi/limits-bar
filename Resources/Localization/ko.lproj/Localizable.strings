@@ -56,3 +56,4 @@
 "Unexpected response format" = "예상하지 못한 응답 형식";
 "config.json could not be read: %@" = "config.json을 읽을 수 없음: %@";
 "Could not save config.json: %@" = "config.json을 저장할 수 없음: %@";
+"Turn On Notifications in System Settings…" = "시스템 설정에서 알림 켜기…";

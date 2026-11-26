@@ -77,6 +77,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     nonisolated func menuWillOpen(_ menu: NSMenu) {
         MainActor.assumeIsolated {
             menuIsOpen = true
+            Task { await alerts.updateStatus() }
             // Numbers older than two minutes get a background refresh; the rows update in place.
             if store.lastRefresh.map({ Date().timeIntervalSince($0) > 120 }) ?? true {
                 Task { await store.refresh() }
@@ -148,6 +149,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let enabled = item(L("Notify When Limits Run Low"), #selector(toggleAlerts))
         enabled.state = store.alertsEnabled ? .on : .off
         sub.addItem(enabled)
+        if store.alertsEnabled && alerts.notificationsDenied {
+            sub.addItem(item(L("Turn On Notifications in System Settings…"), #selector(openNotificationSettings)))
+        }
         sub.addItem(.separator())
         for t in Self.thresholdChoices {
             let mi = item(Lf("At %d%% Left", Int(t)), #selector(toggleThreshold(_:)))
@@ -177,6 +181,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         store.toggleThreshold(t)
     }
 
+    @objc private func openNotificationSettings() { alerts.openNotificationSettings() }
     @objc private func unmuteAll() { store.unmuteAll() }
     @objc private func testAlert() { alerts.sendTest() }
 

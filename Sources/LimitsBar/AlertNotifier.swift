@@ -30,7 +30,23 @@ final class AlertNotifier: NSObject, UNUserNotificationCenterDelegate {
         center.requestAuthorization(options: [.alert, .sound]) { granted, error in
             if let error { NSLog("LimitsBar: notification permission error: \(error.localizedDescription)") }
             else if !granted { NSLog("LimitsBar: notifications not allowed") }
+            Task { @MainActor in await self.updateStatus() }
         }
+    }
+
+    /// Whether macOS lets us post notifications; shown in the Alerts menu when it doesn't.
+    private(set) var notificationsDenied = false
+
+    func updateStatus() async {
+        let settings = await center.notificationSettings()
+        notificationsDenied = settings.authorizationStatus == .denied
+        NSLog("LimitsBar: notification authorization status %d", settings.authorizationStatus.rawValue)
+    }
+
+    func openNotificationSettings() {
+        let id = Bundle.main.bundleIdentifier ?? ""
+        let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)")!
+        NSWorkspace.shared.open(url)
     }
 
     func process(_ snapshots: [ProviderSnapshot]) {

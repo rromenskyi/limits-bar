@@ -56,3 +56,4 @@
 "Unexpected response format" = "响应格式异常";
 "config.json could not be read: %@" = "无法读取 config.json：%@";
 "Could not save config.json: %@" = "无法保存 config.json：%@";
+"Turn On Notifications in System Settings…" = "在系统设置中打开通知…";
