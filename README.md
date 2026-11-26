@@ -104,7 +104,8 @@ You can also edit the file by hand; it is re-read on every refresh. All fields a
 
 ```json
 {
-  "menuBar": "bars",
+  "menuBar": "compact",
+  "editor": "Sublime Text",
   "disabled": ["devin"],
   "alerts": { "enabled": true, "thresholds": [20, 5], "muted": ["codex/Week"] },
   "custom": [
@@ -115,6 +116,10 @@ You can also edit the file by hand; it is re-read on every refresh. All fields a
 ```
 
 - `menuBar`: `"compact"` (default), `"bars"` or `"numbers"`
+- `editor`: the app **Edit config.json…** opens, as a name (`"Sublime Text"`), bundle id or path.
+  Without it LimitsBar picks an installed code editor (VS Code, Cursor, Zed, Sublime Text, BBEdit,
+  CotEditor, Nova, TextMate), then your plain-text editor, rather than the `.json` default, which
+  is often Xcode
 - `disabled`: provider ids to hide (`claude`, `codex`, `muse`, `devin`, or a custom id)
 - `alerts`: `enabled` (default `true`), `thresholds` in percent left (default `[20, 5]`), and
   `muted` windows as `"provider/Window"`
