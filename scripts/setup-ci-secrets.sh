@@ -8,6 +8,8 @@
 #      ./scripts/setup-ci-secrets.sh
 #   3. Delete the exported .p12.
 #
+# The script asks for the .p12 password, so run it in a terminal (or pass P12_PASSWORD).
+#
 # Sets DEVELOPER_ID_P12_BASE64, DEVELOPER_ID_P12_PASSWORD, NOTARY_KEY_P8_BASE64,
 # NOTARY_KEY_ID, NOTARY_ISSUER_ID and SPARKLE_PRIVATE_KEY.
 set -euo pipefail
@@ -16,7 +18,12 @@ REPO="${REPO:-rromenskyi/limits-bar}"
 : "${DEVELOPER_ID_P12:?path to the exported .p12}" "${NOTARY_KEY_P8:?path to the App Store Connect API key (.p8)}"
 : "${NOTARY_KEY_ID:?}" "${NOTARY_ISSUER_ID:?}"
 
-read -r -s -p "Password of $DEVELOPER_ID_P12: " P12_PASSWORD; echo
+[[ -f "$DEVELOPER_ID_P12" ]] || { echo "error: $DEVELOPER_ID_P12 not found. Export it from Keychain Access first (step 1)." >&2; exit 1; }
+[[ -f "$NOTARY_KEY_P8" ]] || { echo "error: $NOTARY_KEY_P8 not found" >&2; exit 1; }
+if [[ -z "${P12_PASSWORD:-}" ]]; then
+  [[ -t 0 ]] || { echo "error: no terminal to ask for the .p12 password; run this in Terminal or set P12_PASSWORD" >&2; exit 1; }
+  read -r -s -p "Password of $DEVELOPER_ID_P12: " P12_PASSWORD; echo
+fi
 openssl pkcs12 -in "$DEVELOPER_ID_P12" -passin "pass:$P12_PASSWORD" -nokeys -legacy >/dev/null 2>&1 \
   || openssl pkcs12 -in "$DEVELOPER_ID_P12" -passin "pass:$P12_PASSWORD" -nokeys >/dev/null \
   || { echo "error: wrong password or not a .p12" >&2; exit 1; }
