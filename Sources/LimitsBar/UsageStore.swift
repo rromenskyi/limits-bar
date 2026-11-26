@@ -55,6 +55,7 @@ final class UsageStore {
     }
 
     private func saveConfig() {
+        guard !DemoProvider.isEnabled else { return } // demo runs never touch the real config
         do { try config.save(); configError = nil } catch {
             configError = Lf("Could not save config.json: %@", error.localizedDescription)
         }

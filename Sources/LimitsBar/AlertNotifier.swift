@@ -23,7 +23,7 @@ final class AlertNotifier: NSObject, UNUserNotificationCenterDelegate {
                 UNNotificationAction(identifier: Self.mute, title: L("Don't Remind Again"), options: [.destructive]),
             ], intentIdentifiers: []),
         ])
-        if store.config.effectiveAlerts.isEnabled { requestPermission() }
+        if store.config.effectiveAlerts.isEnabled && !DemoProvider.isEnabled { requestPermission() }
     }
 
     func requestPermission() {
@@ -51,7 +51,10 @@ final class AlertNotifier: NSObject, UNUserNotificationCenterDelegate {
 
     /// Plans and sends alerts. Crossings are only recorded while notifications are allowed, so an
     /// alert that couldn't be shown (permission pending or off) still fires once it's granted.
+    /// Demo data never alerts: it would post fake numbers and record its crossings in the real
+    /// alert state, suppressing the real alerts for those windows.
     func process(_ snapshots: [ProviderSnapshot]) async {
+        guard !DemoProvider.isEnabled else { return }
         let settings = await center.notificationSettings()
         notificationsDenied = settings.authorizationStatus == .denied
         guard [.authorized, .provisional].contains(settings.authorizationStatus) else { return }
