@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import LimitsBarCore
 import Observation
@@ -11,14 +12,63 @@ final class UsageStore {
     private(set) var snapshots: [ProviderID: ProviderSnapshot] = [:]
     private(set) var isRefreshing = false
     private(set) var lastRefresh: Date?
+    private(set) var config = Config()
+    private(set) var configError: String?
 
-    var enabled: Set<ProviderID> {
-        didSet { UserDefaults.standard.set(enabled.map(\.rawValue), forKey: "enabledProviders") }
+    private var pollTask: Task<Void, Never>?
+
+    init(autoStart: Bool = true) {
+        reloadConfig()
+        if autoStart { start() }
     }
 
-    /// Show only the tightest provider in the menu bar instead of all of them.
-    var compactLabel: Bool {
-        didSet { UserDefaults.standard.set(compactLabel, forKey: "compactLabel") }
+    // MARK: - Config
+
+    /// Re-read on every refresh, so hand edits to config.json apply without a restart.
+    func reloadConfig() {
+        (config, configError) = Config.load()
+        let known = Set(config.allProviderIDs)
+        snapshots = snapshots.filter { known.contains($0.key) }
+    }
+
+    private func saveConfig() {
+        do { try config.save(); configError = nil } catch {
+            configError = "Could not save config.json: \(error.localizedDescription)"
+        }
+    }
+
+    var allProviders: [ProviderID] { config.allProviderIDs }
+
+    func isEnabled(_ id: ProviderID) -> Bool { config.isEnabled(id) }
+
+    func setEnabled(_ id: ProviderID, _ on: Bool) {
+        var disabled = Set(config.disabled ?? [])
+        if on { disabled.remove(id.id) } else { disabled.insert(id.id) }
+        config.disabled = disabled.isEmpty ? nil : disabled.sorted()
+        saveConfig()
+        if on { Task { await refresh() } }
+    }
+
+    var menuBarStyle: MenuBarStyle {
+        get { MenuBarStyle(rawValue: config.menuBar ?? "") ?? .bars }
+        set { config.menuBar = newValue == .bars ? nil : newValue.rawValue; saveConfig() }
+    }
+
+    func openConfigFile() {
+        let url = Config.fileURL
+        if !FileManager.default.fileExists(atPath: url.path) { saveConfig() }
+        NSWorkspace.shared.open(url)
+    }
+
+    /// True when the provider's CLI or login wasn't found on this machine.
+    func isMissing(_ id: ProviderID) -> Bool {
+        if case .notConfigured = snapshots[id]?.status { return true }
+        return false
+    }
+
+    /// Enabled providers that are actually present, in display order.
+    var visible: [ProviderID] {
+        allProviders.filter { isEnabled($0) && !isMissing($0) }
     }
 
     var launchAtLogin: Bool {
@@ -32,17 +82,7 @@ final class UsageStore {
         }
     }
 
-    private let providers: [any UsageProvider] = Providers.all()
-    private var pollTask: Task<Void, Never>?
-
-    init(autoStart: Bool = true) {
-        let saved = UserDefaults.standard.stringArray(forKey: "enabledProviders")
-        enabled = Set((saved ?? ProviderID.allCases.map(\.rawValue)).compactMap(ProviderID.init(rawValue:)))
-        compactLabel = UserDefaults.standard.bool(forKey: "compactLabel")
-        if autoStart { start() }
-    }
-
-    var orderedEnabled: [ProviderID] { ProviderID.allCases.filter(enabled.contains) }
+    // MARK: - Polling
 
     func start() {
         pollTask?.cancel()
@@ -58,7 +98,8 @@ final class UsageStore {
         guard !isRefreshing else { return }
         isRefreshing = true
         defer { isRefreshing = false }
-        let active = providers.filter { enabled.contains($0.id) }
+        reloadConfig()
+        let active = Providers.all(config: config).filter { config.isEnabled($0.id) }
         let results = await withTaskGroup(of: ProviderSnapshot.self) { group in
             for p in active { group.addTask { await p.fetch() } }
             var out: [ProviderSnapshot] = []
@@ -67,7 +108,8 @@ final class UsageStore {
         }
         for var s in results {
             // A failed check keeps the last known numbers, marked with the error, rather than blanking the row.
-            if s.windows.isEmpty, let old = snapshots[s.provider], !old.windows.isEmpty, s.status != .ok {
+            if s.windows.isEmpty, let old = snapshots[s.provider], !old.windows.isEmpty,
+               s.status != .ok, !Self.isMissingStatus(s.status) {
                 s.windows = old.windows
                 s.plan = s.plan ?? old.plan
                 s.fetchedAt = old.fetchedAt
@@ -76,27 +118,40 @@ final class UsageStore {
         }
         lastRefresh = Date()
         NSLog("LimitsBar: refreshed: %@", menuBarText)
+        Snapshot.captureStatusItemIfRequested()
     }
 
-    func toggle(_ id: ProviderID) {
-        if enabled.contains(id) { enabled.remove(id) } else {
-            enabled.insert(id)
-            Task { await refresh() }
+    private static func isMissingStatus(_ s: ProviderStatus) -> Bool {
+        if case .notConfigured = s { return true }
+        return false
+    }
+
+    // MARK: - Menu bar
+
+    var menuBarItems: [MenuBarIcon.Item] {
+        visible.map { id in
+            guard let s = snapshots[id] else {
+                return MenuBarIcon.Item(tag: id.shortTag, short: nil, long: nil, dimmed: true)
+            }
+            let w = s.windows.map { $0.remainingPercent / 100 }
+            return MenuBarIcon.Item(tag: id.shortTag, short: w.first,
+                                    long: w.count > 1 ? w.dropFirst().min() : nil,
+                                    dimmed: s.status != .ok)
         }
     }
 
-    /// Text for the menu bar item, e.g. "C82 X12 M44 D100".
+    /// Text form, e.g. "C82 X12 M44 D100".
     var menuBarText: String {
-        let items = orderedEnabled.compactMap { id -> (ProviderID, Double?)? in
-            guard let s = snapshots[id] else { return (id, nil) }
-            if case .notConfigured = s.status { return nil }
-            return (id, s.minRemaining)
+        let items = visible.map { id in
+            "\(id.shortTag)\(snapshots[id]?.minRemaining.map { String(Int($0.rounded())) } ?? "?")"
         }
-        if items.isEmpty { return snapshots.isEmpty ? "…" : "–" }
-        if compactLabel, let tightest = items.filter({ $0.1 != nil }).min(by: { $0.1! < $1.1! }) {
-            return "\(tightest.0.shortTag)\(Int(tightest.1!.rounded()))"
+        return items.isEmpty ? "–" : items.joined(separator: " ")
+    }
+
+    var accessibilityText: String {
+        let parts = visible.map { id in
+            "\(id.displayName) \(snapshots[id]?.minRemaining.map { "\(Int($0.rounded())) percent left" } ?? "unknown")"
         }
-        return items.map { id, v in "\(id.shortTag)\(v.map { String(Int($0.rounded())) } ?? "?")" }
-            .joined(separator: " ")
+        return parts.isEmpty ? "LimitsBar" : parts.joined(separator: ", ")
     }
 }

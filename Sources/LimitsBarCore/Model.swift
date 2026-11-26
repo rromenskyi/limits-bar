@@ -20,26 +20,28 @@ public struct UsageWindow: Sendable, Equatable, Codable {
     }
 }
 
-public enum ProviderID: String, Sendable, CaseIterable, Codable {
-    case claude, codex, muse, devin
+/// Identifies a provider. Built-ins have fixed ids; custom providers come from the config file.
+public struct ProviderID: Hashable, Sendable, Encodable {
+    public let id: String
+    public let displayName: String
+    /// One-letter tag for the menu bar.
+    public let shortTag: String
 
-    public var displayName: String {
-        switch self {
-        case .claude: "Claude"
-        case .codex: "Codex"
-        case .muse: "Muse"
-        case .devin: "Devin"
-        }
+    public init(id: String, displayName: String, shortTag: String) {
+        self.id = id
+        self.displayName = displayName
+        self.shortTag = shortTag
     }
 
-    /// One-letter tag for the menu bar.
-    public var shortTag: String {
-        switch self {
-        case .claude: "C"
-        case .codex: "X"
-        case .muse: "M"
-        case .devin: "D"
-        }
+    public static let claude = ProviderID(id: "claude", displayName: "Claude", shortTag: "C")
+    public static let codex = ProviderID(id: "codex", displayName: "Codex", shortTag: "X")
+    public static let muse = ProviderID(id: "muse", displayName: "Muse", shortTag: "M")
+    public static let devin = ProviderID(id: "devin", displayName: "Devin", shortTag: "D")
+    public static let builtIns: [ProviderID] = [.claude, .codex, .muse, .devin]
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        try c.encode(id)
     }
 }
 
@@ -89,7 +91,7 @@ extension ProviderStatus: Codable {
     }
 }
 
-public struct ProviderSnapshot: Sendable, Equatable, Codable {
+public struct ProviderSnapshot: Sendable, Equatable, Encodable {
     public var provider: ProviderID
     public var plan: String?
     public var windows: [UsageWindow]
@@ -146,7 +148,12 @@ extension UsageProvider {
 }
 
 public enum Providers {
-    public static func all() -> [any UsageProvider] {
+    public static func builtIns() -> [any UsageProvider] {
         [ClaudeProvider(), CodexProvider(), MuseProvider(), DevinProvider()]
+    }
+
+    /// Built-ins plus custom command providers from the config, in display order.
+    public static func all(config: Config) -> [any UsageProvider] {
+        builtIns() + config.custom.map(CommandProvider.init)
     }
 }

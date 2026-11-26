@@ -135,3 +135,83 @@ private func json(_ s: String) throws -> [String: Any] {
         #expect(obj["message"] as? String == "expired")
     }
 }
+
+@Suite struct ConfigTests {
+    @Test func emptyAndPartialFiles() throws {
+        let c = try JSONDecoder().decode(Config.self, from: Data("{}".utf8))
+        #expect(c.custom.isEmpty)
+        #expect(c.isEnabled(.claude))
+
+        let d = try JSONDecoder().decode(Config.self, from: Data(#"{"disabled":["devin"],"menuBar":"numbers"}"#.utf8))
+        #expect(!d.isEnabled(.devin))
+        #expect(d.isEnabled(.muse))
+        #expect(d.menuBar == "numbers")
+    }
+
+    @Test func customProviderIDs() throws {
+        let c = try JSONDecoder().decode(Config.self, from: Data("""
+        {"custom":[{"id":"gem","name":"gemini","command":["gem-quota"]},
+                   {"id":"or","name":"OpenRouter","tag":"OR","command":["x"]}]}
+        """.utf8))
+        #expect(c.allProviderIDs.map(\.id) == ["claude", "codex", "muse", "devin", "gem", "or"])
+        #expect(c.custom[0].providerID.shortTag == "G")
+        #expect(c.custom[1].providerID.shortTag == "OR")
+    }
+
+    @Test func roundTripsThroughFile() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathComponent("config.json")
+        let c = Config(menuBar: "numbers", disabled: ["codex"],
+                       custom: [.init(id: "e", name: "Example", command: ["~/bin/e"], timeout: 5)])
+        try c.save(to: url)
+        let (loaded, err) = Config.load(from: url)
+        #expect(err == nil)
+        #expect(loaded == c)
+    }
+
+    @Test func brokenFileIsReported() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json")
+        try Data("{not json".utf8).write(to: url)
+        let (c, err) = Config.load(from: url)
+        #expect(err != nil)
+        #expect(c == Config())
+    }
+}
+
+@Suite struct CommandProviderTests {
+    let id = ProviderID(id: "e", displayName: "Example", shortTag: "E")
+
+    @Test func remainingAndUsed() throws {
+        let j = try json("""
+        {"plan":"Demo","windows":[
+          {"label":"Day","remainingPercent":64,"resetsAt":"2030-01-01T00:00:00Z"},
+          {"label":"Week","usedPercent":30,"resetsAt":1893456000},
+          {"label":"Junk"}]}
+        """)
+        let s = try CommandProvider.parse(j, id: id)
+        #expect(s.plan == "Demo")
+        #expect(s.windows.map(\.remainingPercent) == [64, 70])
+        #expect(s.windows[1].resetsAt == Date(timeIntervalSince1970: 1_893_456_000))
+        #expect(s.windows[0].resetsAt != nil)
+    }
+
+    @Test func errorField() throws {
+        #expect(throws: ProviderError.self) { try CommandProvider.parse(try json(#"{"error":"quota api down"}"#), id: id) }
+    }
+
+    @Test func runsExampleScript() async throws {
+        let script = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("examples/custom-provider.sh")
+        let p = CommandProvider(.init(id: "e", name: "Example", command: [script.path]))
+        let s = await p.fetch()
+        #expect(s.status == .ok)
+        #expect(s.windows.map(\.remainingPercent) == [64, 70])
+    }
+
+    @Test func missingCommandIsNotConfigured() async {
+        let p = CommandProvider(.init(id: "e", name: "Example", command: ["/nonexistent/quota"]))
+        let s = await p.fetch()
+        if case .notConfigured = s.status {} else { Issue.record("expected notConfigured, got \(s.status)") }
+    }
+}

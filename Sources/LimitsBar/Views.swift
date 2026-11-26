@@ -9,8 +9,13 @@ struct LimitsBarApp: App {
         MenuBarExtra {
             UsagePanel(store: store)
         } label: {
-            Text(store.menuBarText)
-                .monospacedDigit()
+            switch store.menuBarStyle {
+            case .bars:
+                Image(nsImage: MenuBarIcon.image(for: store.menuBarItems))
+                    .accessibilityLabel(store.accessibilityText)
+            case .numbers:
+                Text(store.menuBarText).monospacedDigit()
+            }
         }
         .menuBarExtraStyle(.window)
     }
@@ -23,11 +28,17 @@ struct UsagePanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
-            if store.orderedEnabled.isEmpty {
-                Text("No providers enabled.")
+            if store.visible.isEmpty {
+                Text(store.snapshots.isEmpty ? "Checking…" : "No supported CLIs found. See Settings.")
+                    .font(.callout)
                     .foregroundStyle(.secondary)
             }
-            ForEach(store.orderedEnabled, id: \.self) { id in
+            if let err = store.configError {
+                Label(err, systemImage: "exclamationmark.triangle")
+                    .font(.caption).foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(store.visible, id: \.self) { id in
                 ProviderCard(id: id, snapshot: store.snapshots[id])
             }
             Divider()
@@ -64,16 +75,29 @@ struct UsagePanel: View {
 
     private var settings: some View {
         VStack(alignment: .leading, spacing: 6) {
-            ForEach(ProviderID.allCases, id: \.self) { id in
-                Toggle(id.displayName, isOn: Binding(
-                    get: { store.enabled.contains(id) },
-                    set: { _ in store.toggle(id) }))
+            ForEach(store.allProviders, id: \.self) { id in
+                HStack {
+                    Toggle(id.displayName, isOn: Binding(
+                        get: { store.isEnabled(id) },
+                        set: { store.setEnabled(id, $0) }))
+                    if store.isMissing(id) {
+                        Text("not found").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             }
             Divider()
-            Toggle("Menu bar: tightest only", isOn: $store.compactLabel)
+            Picker("Menu bar", selection: Binding(
+                get: { store.menuBarStyle },
+                set: { store.menuBarStyle = $0 })) {
+                ForEach(MenuBarStyle.allCases, id: \.self) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
             Toggle("Launch at login", isOn: Binding(
                 get: { store.launchAtLogin },
                 set: { store.launchAtLogin = $0 }))
+            Button("Edit config.json…") { store.openConfigFile() }
+                .buttonStyle(.link)
+                .font(.caption)
         }
         .toggleStyle(.checkbox)
     }
