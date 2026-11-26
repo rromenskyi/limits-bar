@@ -72,3 +72,8 @@
 "Website" = "网站";
 "Sponsor on GitHub" = "在 GitHub 上赞助";
 "Third-Party Software" = "第三方软件";
+
+/* Updates */
+"Automatic Updates" = "自动更新";
+"Check Automatically" = "自动检查";
+"Download and Install Automatically" = "自动下载并安装";

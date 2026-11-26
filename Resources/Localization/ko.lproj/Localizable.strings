@@ -72,3 +72,8 @@
 "Website" = "웹사이트";
 "Sponsor on GitHub" = "GitHub에서 후원하기";
 "Third-Party Software" = "타사 소프트웨어";
+
+/* Updates */
+"Automatic Updates" = "자동 업데이트";
+"Check Automatically" = "자동으로 확인";
+"Download and Install Automatically" = "자동으로 다운로드 및 설치";

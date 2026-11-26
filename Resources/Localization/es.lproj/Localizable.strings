@@ -72,3 +72,8 @@
 "Website" = "Sitio web";
 "Sponsor on GitHub" = "Patrocinar en GitHub";
 "Third-Party Software" = "Software de terceros";
+
+/* Updates */
+"Automatic Updates" = "Actualizaciones automáticas";
+"Check Automatically" = "Buscar automáticamente";
+"Download and Install Automatically" = "Descargar e instalar automáticamente";

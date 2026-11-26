@@ -156,9 +156,37 @@ final class StatusItemController: NSObject, NSMenuDelegate {
                                 action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "")
             mi.target = updater
             menu.addItem(mi)
+            menu.addItem(updatesItem(updater.updater))
         }
         menu.addItem(.separator())
         menu.addItem(item(L("Quit LimitsBar"), #selector(quit), key: "q"))
+    }
+
+    /// Sparkle's own settings, stored in its defaults: daily check (on by default in release
+    /// builds) and silent download and install.
+    private func updatesItem(_ updater: SPUUpdater) -> NSMenuItem {
+        let root = NSMenuItem(title: L("Automatic Updates"), action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        sub.autoenablesItems = false
+        let check = item(L("Check Automatically"), #selector(toggleAutoCheck))
+        check.state = updater.automaticallyChecksForUpdates ? .on : .off
+        sub.addItem(check)
+        let install = item(L("Download and Install Automatically"), #selector(toggleAutoInstall))
+        install.state = updater.automaticallyDownloadsUpdates ? .on : .off
+        install.isEnabled = updater.automaticallyChecksForUpdates && updater.allowsAutomaticUpdates
+        sub.addItem(install)
+        root.submenu = sub
+        return root
+    }
+
+    @objc private func toggleAutoCheck() {
+        guard let u = updater?.updater else { return }
+        u.automaticallyChecksForUpdates.toggle()
+    }
+
+    @objc private func toggleAutoInstall() {
+        guard let u = updater?.updater else { return }
+        u.automaticallyDownloadsUpdates.toggle()
     }
 
     private func alertsItem() -> NSMenuItem {

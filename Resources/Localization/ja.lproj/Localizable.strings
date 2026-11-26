@@ -72,3 +72,8 @@
 "Website" = "Web サイト";
 "Sponsor on GitHub" = "GitHub でスポンサーになる";
 "Third-Party Software" = "サードパーティ製ソフトウェア";
+
+/* Updates */
+"Automatic Updates" = "自動アップデート";
+"Check Automatically" = "自動的に確認";
+"Download and Install Automatically" = "自動的にダウンロードしてインストール";

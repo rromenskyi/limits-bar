@@ -72,3 +72,8 @@
 "Website" = "Сайт";
 "Sponsor on GitHub" = "Підтримати на GitHub";
 "Third-Party Software" = "Стороннє ПЗ";
+
+/* Updates */
+"Automatic Updates" = "Автооновлення";
+"Check Automatically" = "Перевіряти автоматично";
+"Download and Install Automatically" = "Завантажувати й установлювати автоматично";

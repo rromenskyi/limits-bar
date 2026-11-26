@@ -48,7 +48,7 @@ and two bars per provider: the short window on top, the tightest longer window b
 
 Click the item, with either button, for the menu: every window with how much is left and when it
 resets, then **Refresh Now**, **Providers**, **Menu Bar Style**, **Alerts**, **Launch at Login**,
-**Edit config.json…**, **About LimitsBar** (links, sponsor page, licenses), **Check for Updates…** and **Quit**.
+**Edit config.json…**, **About LimitsBar** (links, sponsor page, licenses), **Check for Updates…**, **Automatic Updates** and **Quit**. Release builds check for updates once a day; **Automatic Updates** turns that off or lets updates download and install by themselves.
 
 ### Alerts
 
