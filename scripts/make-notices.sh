@@ -32,7 +32,8 @@ cat <<HEADER
 LimitsBar is released under the MIT License (see LICENSE). It ships with the
 third-party software listed below, under the licenses that follow.
 
-Claude, Codex, Devin and Muse are trademarks of their respective owners.
+Claude, Codex, Gemini, Cursor, GitHub Copilot, Devin and Muse are trademarks of their
+respective owners.
 LimitsBar is an independent project and is not affiliated with or endorsed by them.
 
 ## Sparkle ${SPARKLE_VERSION}

@@ -100,13 +100,19 @@ public struct Config: Codable, Equatable, Sendable {
         !(disabled ?? []).contains(id.id)
     }
 
+    /// Built-ins in their usual order, each replaced in place by a custom provider with its id, then
+    /// the other custom providers.
     public var allProviderIDs: [ProviderID] {
-        ProviderID.builtIns + validCustom.map(\.providerID)
+        let overrides = Dictionary(validCustom.map { ($0.id, $0.providerID) }, uniquingKeysWith: { a, _ in a })
+        let builtIn = Set(ProviderID.builtIns.map(\.id))
+        return ProviderID.builtIns.map { overrides[$0.id] ?? $0 }
+            + validCustom.filter { !builtIn.contains($0.id) }.map(\.providerID)
     }
 
-    /// Custom providers with a usable, unique id that doesn't shadow a built-in (first one wins).
+    /// Custom providers with a usable, unique id (first one wins). One with a built-in's id replaces
+    /// that built-in: a script someone set up for a service before LimitsBar supported it keeps working.
     public var validCustom: [CustomProvider] {
-        var seen = Set(ProviderID.builtIns.map(\.id))
+        var seen = Set<String>()
         return custom.filter { !$0.id.isEmpty && seen.insert($0.id).inserted }
     }
 

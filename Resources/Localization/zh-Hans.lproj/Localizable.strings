@@ -77,3 +77,21 @@
 "Automatic Updates" = "自动更新";
 "Check Automatically" = "自动检查";
 "Download and Install Automatically" = "自动下载并安装";
+
+/* Gemini, Cursor, Copilot */
+"%@ rejected the token (HTTP %d). %@" = "%@ 拒绝了令牌（HTTP %d）。%@";
+"No GitHub login found (Copilot plugin or gh CLI)" = "未找到 GitHub 登录信息（Copilot 插件或 gh CLI）";
+"Sign in to GitHub again (gh auth login)." = "请重新登录 GitHub（gh auth login）。";
+"No Copilot plan on this GitHub account" = "此 GitHub 帐户没有 Copilot 方案";
+"No Gemini CLI login found" = "未找到 Gemini CLI 登录信息";
+"Gemini CLI is not signed in with Google" = "Gemini CLI 未使用 Google 登录";
+"The Gemini CLI token has expired. Use the Gemini CLI once to refresh it." = "Gemini CLI 令牌已过期。请使用一次 Gemini CLI 以刷新令牌。";
+"This Google account has no Gemini Code Assist project" = "此 Google 帐户没有 Gemini Code Assist 项目";
+"No Cursor login found" = "未找到 Cursor 登录信息";
+"Cursor is not signed in" = "Cursor 未登录";
+"Open Cursor once to refresh it." = "请打开一次 Cursor 以刷新令牌。";
+"Month" = "月";
+"On-Demand" = "按需";
+"Chat" = "聊天";
+"Completions" = "代码补全";
+"Premium" = "高级";

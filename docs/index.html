@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LimitsBar — Claude, Codex, Muse and Devin limits in your Mac menu bar</title>
-<meta name="description" content="LimitsBar is a free, open-source macOS menu bar app that shows how much of your Claude Code, OpenAI Codex, Muse and Devin subscription limits is left, with alerts before you run out.">
+<title>LimitsBar — Claude, Codex, Gemini, Cursor, Copilot and more limits in your Mac menu bar</title>
+<meta name="description" content="LimitsBar is a free, open-source macOS menu bar app that shows how much of your Claude Code, OpenAI Codex, Gemini CLI, Cursor, GitHub Copilot, Muse and Devin subscription limits is left, with alerts before you run out.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://rromenskyi.github.io/limits-bar/">
 <meta name="theme-color" content="#1b1d4a">
@@ -16,7 +16,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LimitsBar">
 <meta property="og:title" content="LimitsBar — coding-agent limits in your Mac menu bar">
-<meta property="og:description" content="See what's left of your Claude, Codex, Muse and Devin limits at a glance, and get a heads-up before you run out. Free and open source.">
+<meta property="og:description" content="See what's left of your Claude, Codex, Gemini, Cursor, Copilot, Muse and Devin limits at a glance, and get a heads-up before you run out. Free and open source.">
 <meta property="og:url" content="https://rromenskyi.github.io/limits-bar/">
 <meta property="og:image" content="https://rromenskyi.github.io/limits-bar/assets/og-image.jpg">
 <meta property="og:image:width" content="1200">
@@ -30,7 +30,7 @@
   "@type": "SoftwareApplication",
   "name": "LimitsBar",
   "url": "https://rromenskyi.github.io/limits-bar/",
-  "description": "A macOS menu bar app that shows remaining Claude Code, OpenAI Codex, Muse and Devin subscription limits, with low-limit alerts.",
+  "description": "A macOS menu bar app that shows remaining Claude Code, OpenAI Codex, Gemini CLI, Cursor, GitHub Copilot, Muse and Devin subscription limits, with low-limit alerts.",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "macOS 14 or later",
   "downloadUrl": "https://github.com/rromenskyi/limits-bar/releases/latest/download/LimitsBar.dmg",
@@ -251,7 +251,7 @@
     <div class="hero-top">
       <img class="app-icon" src="assets/icon-512.png" alt="LimitsBar app icon" width="104" height="104">
       <h1>LimitsBar</h1>
-      <p class="tagline">How much is left of your <strong>Claude</strong>, <strong>Codex</strong>, <strong>Muse</strong> and <strong>Devin</strong> limits, always in the menu bar. With a heads-up before you run out.</p>
+      <p class="tagline">How much is left of your <strong>Claude</strong>, <strong>Codex</strong>, <strong>Gemini</strong>, <strong>Cursor</strong>, <strong>Copilot</strong>, <strong>Muse</strong> and <strong>Devin</strong> limits, always in the menu bar. With a heads-up before you run out.</p>
       <div class="cta">
         <a class="btn btn-primary" href="https://github.com/rromenskyi/limits-bar/releases/latest/download/LimitsBar.dmg">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
@@ -281,7 +281,7 @@
       <div class="style-card">
         <div class="strip"><picture><source srcset="assets/style-compact-dark.png" media="(prefers-color-scheme: dark)"><img src="assets/style-compact-light.png" alt="Compact style: four level bars"></picture></div>
         <h3>Compact <span class="badge">default</span></h3>
-        <p>A level bar per service, in order: Claude, Codex, Muse, Devin.</p>
+        <p>A level bar per service, in order: Claude, Codex, Muse, Devin, Gemini, Cursor, Copilot.</p>
       </div>
       <div class="style-card">
         <div class="strip"><picture><source srcset="assets/style-bars-dark.png" media="(prefers-color-scheme: dark)"><img src="assets/style-bars-light.png" alt="Bars style: a letter and two bars per service"></picture></div>
@@ -387,6 +387,9 @@
           <tr><td><strong>Codex</strong><br><span class="note">ChatGPT sign-in</span></td><td><code>~/.codex/auth.json</code></td><td><code>chatgpt.com</code> usage</td></tr>
           <tr><td><strong>Muse</strong></td><td>nothing</td><td>runs <code>muse usage --json</code></td></tr>
           <tr><td><strong>Devin</strong><br><span class="note">Devin CLI</span></td><td><code>~/.local/share/devin/credentials.toml</code></td><td>the server named in that file</td></tr>
+          <tr><td><strong>Gemini</strong><br><span class="note">Gemini CLI, Google sign-in</span></td><td><code>~/.gemini/oauth_creds.json</code></td><td><code>cloudcode-pa.googleapis.com</code> quota</td></tr>
+          <tr><td><strong>Cursor</strong><br><span class="note">Cursor app</span></td><td>Cursor's state database, read-only</td><td><code>cursor.com</code> usage summary</td></tr>
+          <tr><td><strong>Copilot</strong><br><span class="note">GitHub Copilot</span></td><td>Copilot plugin login, or <code>gh auth token</code></td><td><code>api.github.com</code> Copilot quota</td></tr>
         </tbody>
       </table>
     </div>
@@ -409,8 +412,8 @@
     <span class="k">"muted"</span>: [<span class="s">"codex/Week"</span>]
   },
   <span class="k">"custom"</span>: [{
-    <span class="k">"id"</span>: <span class="s">"gemini"</span>, <span class="k">"name"</span>: <span class="s">"Gemini"</span>,
-    <span class="k">"command"</span>: [<span class="s">"~/bin/gemini-quota"</span>]
+    <span class="k">"id"</span>: <span class="s">"openrouter"</span>, <span class="k">"name"</span>: <span class="s">"OpenRouter"</span>,
+    <span class="k">"command"</span>: [<span class="s">"~/bin/openrouter-credits"</span>]
   }]
 }</code></pre>
   </div>
@@ -420,7 +423,7 @@
   <div class="wrap" style="max-width:780px">
     <h2>Questions</h2>
     <details>
-      <summary>Is this made by Anthropic, OpenAI, Meta or Cognition?</summary>
+      <summary>Is this made by Anthropic, OpenAI, Google, GitHub, Cursor, Meta or Cognition?</summary>
       <p>No. LimitsBar is an independent open-source project. It uses the same usage endpoints the official CLIs use, which aren't documented and may change.</p>
     </details>
     <details>

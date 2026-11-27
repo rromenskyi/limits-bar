@@ -331,5 +331,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         controller = StatusItemController(store: store, alerts: alerts, updater: updater)
         store.start()
         AboutPanel.captureIfRequested()
+        // Debug hook: LIMITSBAR_SEND_TEST_ALERT=1 posts the test alert shortly after launch.
+        if ProcessInfo.processInfo.environment["LIMITSBAR_SEND_TEST_ALERT"] != nil {
+            RunLoop.main.add(Timer(timeInterval: 2, repeats: false) { [weak alerts] _ in
+                MainActor.assumeIsolated { alerts?.sendTest() }
+            }, forMode: .common)
+        }
     }
 }

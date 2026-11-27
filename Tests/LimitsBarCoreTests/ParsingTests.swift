@@ -153,7 +153,7 @@ private func json(_ s: String) throws -> [String: Any] {
         {"custom":[{"id":"gem","name":"gemini","command":["gem-quota"]},
                    {"id":"or","name":"OpenRouter","tag":"OR","command":["x"]}]}
         """.utf8))
-        #expect(c.allProviderIDs.map(\.id) == ["claude", "codex", "muse", "devin", "gem", "or"])
+        #expect(c.allProviderIDs.map(\.id) == ["claude", "codex", "muse", "devin", "gemini", "cursor", "copilot", "gem", "or"])
         #expect(c.custom[0].providerID.shortTag == "G")
         #expect(c.custom[1].providerID.shortTag == "OR")
     }
@@ -362,8 +362,11 @@ private func json(_ s: String) throws -> [String: Any] {
                    {"id":"g","name":"G1","command":["x"]},{"id":"g","name":"G2","command":["y"]},
                    {"id":"","name":"Empty","command":["z"]}]}
         """.utf8))
-        #expect(c.allProviderIDs.map(\.id) == ["claude", "codex", "muse", "devin", "g"])
-        #expect(c.validCustom.map(\.name) == ["G1"])
+        #expect(c.allProviderIDs.map(\.id) == ["claude", "codex", "muse", "devin", "gemini", "cursor", "copilot", "g"])
+        #expect(c.validCustom.map(\.name) == ["Fake", "G1"])
+        // A custom provider with a built-in's id takes that built-in's place.
+        #expect(c.allProviderIDs[0].displayName == "Fake")
+        #expect(Providers.all(config: c).first is CommandProvider)
     }
 
     @Test func customTimeoutIsClamped() {

@@ -77,3 +77,21 @@
 "Automatic Updates" = "Actualizaciones automáticas";
 "Check Automatically" = "Buscar automáticamente";
 "Download and Install Automatically" = "Descargar e instalar automáticamente";
+
+/* Gemini, Cursor, Copilot */
+"%@ rejected the token (HTTP %d). %@" = "%@ rechazó el token (HTTP %d). %@";
+"No GitHub login found (Copilot plugin or gh CLI)" = "No se encontró sesión de GitHub (extensión de Copilot o gh CLI)";
+"Sign in to GitHub again (gh auth login)." = "Vuelve a iniciar sesión en GitHub (gh auth login).";
+"No Copilot plan on this GitHub account" = "Esta cuenta de GitHub no tiene plan de Copilot";
+"No Gemini CLI login found" = "No se encontró sesión de Gemini CLI";
+"Gemini CLI is not signed in with Google" = "Gemini CLI no ha iniciado sesión con Google";
+"The Gemini CLI token has expired. Use the Gemini CLI once to refresh it." = "El token de Gemini CLI ha caducado. Usa Gemini CLI una vez para renovarlo.";
+"This Google account has no Gemini Code Assist project" = "Esta cuenta de Google no tiene proyecto de Gemini Code Assist";
+"No Cursor login found" = "No se encontró sesión de Cursor";
+"Cursor is not signed in" = "Cursor no ha iniciado sesión";
+"Open Cursor once to refresh it." = "Abre Cursor una vez para renovarlo.";
+"Month" = "Mes";
+"On-Demand" = "Bajo demanda";
+"Chat" = "Chat";
+"Completions" = "Autocompletados";
+"Premium" = "Premium";

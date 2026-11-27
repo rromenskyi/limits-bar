@@ -77,3 +77,21 @@
 "Automatic Updates" = "自動アップデート";
 "Check Automatically" = "自動的に確認";
 "Download and Install Automatically" = "自動的にダウンロードしてインストール";
+
+/* Gemini, Cursor, Copilot */
+"%@ rejected the token (HTTP %d). %@" = "%@ がトークンを拒否しました（HTTP %d）。%@";
+"No GitHub login found (Copilot plugin or gh CLI)" = "GitHub のログインが見つかりません（Copilot プラグインまたは gh CLI）";
+"Sign in to GitHub again (gh auth login)." = "GitHub にもう一度サインインしてください（gh auth login）。";
+"No Copilot plan on this GitHub account" = "この GitHub アカウントには Copilot プランがありません";
+"No Gemini CLI login found" = "Gemini CLI のログインが見つかりません";
+"Gemini CLI is not signed in with Google" = "Gemini CLI は Google でサインインしていません";
+"The Gemini CLI token has expired. Use the Gemini CLI once to refresh it." = "Gemini CLI のトークンの有効期限が切れています。Gemini CLI を一度使って更新してください。";
+"This Google account has no Gemini Code Assist project" = "この Google アカウントには Gemini Code Assist プロジェクトがありません";
+"No Cursor login found" = "Cursor のログインが見つかりません";
+"Cursor is not signed in" = "Cursor はサインインしていません";
+"Open Cursor once to refresh it." = "Cursor を一度開いて更新してください。";
+"Month" = "月";
+"On-Demand" = "従量課金";
+"Chat" = "チャット";
+"Completions" = "補完";
+"Premium" = "プレミアム";

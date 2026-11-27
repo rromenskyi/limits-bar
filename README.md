@@ -5,7 +5,7 @@
 <h1 align="center">LimitsBar</h1>
 
 <p align="center">
-  Claude, Codex, Muse and Devin limits in your Mac's menu bar.<br>
+  Claude, Codex, Gemini, Cursor, Copilot, Muse and Devin limits in your Mac's menu bar.<br>
   <a href="https://github.com/rromenskyi/limits-bar/releases/latest/download/LimitsBar.dmg"><b>Download</b></a> ·
   <a href="https://rromenskyi.github.io/limits-bar/">Website</a> ·
   <a href="https://github.com/rromenskyi/limits-bar/releases">Releases</a>
@@ -24,6 +24,13 @@ A small macOS menu bar app that shows how much of your coding-agent subscription
 - **Codex** (OpenAI Codex CLI, ChatGPT sign-in): 5-hour and weekly limits
 - **Muse** (Muse Code CLI): rolling window and weekly allowance
 - **Devin** (Devin CLI): daily and weekly quota
+- **Gemini** (Gemini CLI, Google sign-in): daily quota per model
+- **Cursor** (Cursor app): plan usage for the billing cycle, and on-demand usage if it has a limit
+- **Copilot** (GitHub Copilot): monthly premium requests, chat and completions
+
+Gemini and Cursor support is new. It follows the Gemini CLI's source and the responses Cursor's
+dashboard uses, but hasn't been checked against a real account yet; if their row shows an error,
+please open an issue.
 
 Any other service can be added with a small script (see [Custom providers](#custom-providers)).
 Providers whose CLI or login isn't found are hidden automatically, so you only see what you use.
@@ -36,7 +43,7 @@ Apple, and it updates itself (Sparkle). Requires macOS 14 or later.
 
 ## Using it
 
-The menu bar shows one small level bar per provider, in the order Claude, Codex, Muse, Devin,
+The menu bar shows one small level bar per provider, in the order Claude, Codex, Muse, Devin, Gemini, Cursor, Copilot,
 filled to what's left of its tightest window. Four providers take about 20 pt, so the item stays
 visible next to the camera notch. Under **Menu Bar Style** you can switch to **Bars** (a letter
 and two bars per provider: the short window on top, the tightest longer window below) or **Numbers**
@@ -82,13 +89,18 @@ Mac and calls the same usage endpoints those CLIs call:
 | Codex | `~/.codex/auth.json` (`$CODEX_HOME`) | `GET chatgpt.com/backend-api/wham/usage` |
 | Muse | none; runs `muse usage --json` | handled by the CLI |
 | Devin | `~/.local/share/devin/credentials.toml` | `GetUserStatus` on the server named in that file |
+| Gemini | `~/.gemini/oauth_creds.json` (`$GEMINI_CLI_HOME`) | `loadCodeAssist`, then `retrieveUserQuota` on `cloudcode-pa.googleapis.com` |
+| Cursor | Cursor's state database (`state.vscdb`, read-only via `/usr/bin/sqlite3`) | `GET cursor.com/api/usage-summary` |
+| Copilot | `~/.config/github-copilot/apps.json` or `hosts.json`, else `gh auth token` | `GET api.github.com/copilot_internal/user` |
 
 Each token goes only to its own vendor. Nothing is stored, logged, or sent anywhere else. The
 only other network request is the update check against this repository's releases.
 
 LimitsBar never refreshes tokens itself. A refresh can rotate the refresh token and sign the CLI
 out, so when a token has expired the row shows as stale until you next use that CLI. (For Muse,
-LimitsBar runs `muse usage`, and the Muse CLI manages its own sign-in as it always does.)
+LimitsBar runs `muse usage`, and the Muse CLI manages its own sign-in as it always does.) Gemini CLI
+tokens last an hour, so the Gemini row is often stale between CLI sessions; its quota only moves
+while you use the CLI anyway.
 
 The endpoints are unofficial and undocumented. A vendor can change them at any time, and the
 affected row then shows an error while the others keep working.
@@ -189,7 +201,7 @@ is listed with its licenses in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md);
 same text under **About LimitsBar**. If a dependency changes, regenerate it with
 `./scripts/make-notices.sh THIRD_PARTY_NOTICES.md` (CI checks it).
 
-Claude, Codex, Devin and Muse are trademarks of their respective owners. LimitsBar is an
+Claude, Codex, Gemini, Cursor, GitHub Copilot, Devin and Muse are trademarks of their respective owners. LimitsBar is an
 independent project and is not affiliated with or endorsed by them.
 
 If LimitsBar is useful to you, you can [sponsor it on GitHub](https://github.com/sponsors/rromenskyi).

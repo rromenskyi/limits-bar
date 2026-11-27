@@ -8,7 +8,8 @@ import Testing
 
     /// Keys passed indirectly (ternaries, enum titles, window label heads).
     static let indirectKeys = ["Checking…", "No supported CLIs found", "Compact", "Bars", "Numbers", "5h", "Week", "Day", "Window",
-                               "Short", "Long", "Limit", "Scoped", "%dh", "%dm"]
+                               "Short", "Long", "Limit", "Scoped", "%dh", "%dm",
+                               "Month", "On-Demand", "Chat", "Completions", "Premium"]
     /// Pass-through formats that need no translation.
     static let ignored: Set<String> = ["Muse: %@"]
 

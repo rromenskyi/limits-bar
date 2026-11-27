@@ -77,3 +77,21 @@
 "Automatic Updates" = "자동 업데이트";
 "Check Automatically" = "자동으로 확인";
 "Download and Install Automatically" = "자동으로 다운로드 및 설치";
+
+/* Gemini, Cursor, Copilot */
+"%@ rejected the token (HTTP %d). %@" = "%@이(가) 토큰을 거부했습니다(HTTP %d). %@";
+"No GitHub login found (Copilot plugin or gh CLI)" = "GitHub 로그인을 찾을 수 없음(Copilot 플러그인 또는 gh CLI)";
+"Sign in to GitHub again (gh auth login)." = "GitHub에 다시 로그인하십시오(gh auth login).";
+"No Copilot plan on this GitHub account" = "이 GitHub 계정에는 Copilot 요금제가 없음";
+"No Gemini CLI login found" = "Gemini CLI 로그인을 찾을 수 없음";
+"Gemini CLI is not signed in with Google" = "Gemini CLI가 Google로 로그인되어 있지 않음";
+"The Gemini CLI token has expired. Use the Gemini CLI once to refresh it." = "Gemini CLI 토큰이 만료되었습니다. 갱신하려면 Gemini CLI를 한 번 사용하십시오.";
+"This Google account has no Gemini Code Assist project" = "이 Google 계정에는 Gemini Code Assist 프로젝트가 없음";
+"No Cursor login found" = "Cursor 로그인을 찾을 수 없음";
+"Cursor is not signed in" = "Cursor가 로그인되어 있지 않음";
+"Open Cursor once to refresh it." = "갱신하려면 Cursor를 한 번 여십시오.";
+"Month" = "월";
+"On-Demand" = "온디맨드";
+"Chat" = "채팅";
+"Completions" = "코드 완성";
+"Premium" = "프리미엄";

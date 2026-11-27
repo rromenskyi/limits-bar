@@ -37,7 +37,10 @@ public struct ProviderID: Hashable, Sendable, Encodable {
     public static let codex = ProviderID(id: "codex", displayName: "Codex", shortTag: "X")
     public static let muse = ProviderID(id: "muse", displayName: "Muse", shortTag: "M")
     public static let devin = ProviderID(id: "devin", displayName: "Devin", shortTag: "D")
-    public static let builtIns: [ProviderID] = [.claude, .codex, .muse, .devin]
+    public static let gemini = ProviderID(id: "gemini", displayName: "Gemini", shortTag: "G")
+    public static let cursor = ProviderID(id: "cursor", displayName: "Cursor", shortTag: "U")
+    public static let copilot = ProviderID(id: "copilot", displayName: "Copilot", shortTag: "P")
+    public static let builtIns: [ProviderID] = [.claude, .codex, .muse, .devin, .gemini, .cursor, .copilot]
 
     public func encode(to encoder: Encoder) throws {
         var c = encoder.singleValueContainer()
@@ -175,12 +178,16 @@ extension UsageProvider {
 
 public enum Providers {
     public static func builtIns() -> [any UsageProvider] {
-        [ClaudeProvider(), CodexProvider(), MuseProvider(), DevinProvider()]
+        [ClaudeProvider(), CodexProvider(), MuseProvider(), DevinProvider(),
+         GeminiProvider(), CursorProvider(), CopilotProvider()]
     }
 
     /// Built-ins plus custom command providers from the config, in display order.
     public static func all(config: Config) -> [any UsageProvider] {
         if DemoProvider.isEnabled { return DemoProvider.all() }
-        return builtIns() + config.validCustom.map(CommandProvider.init)
+        let custom = Dictionary(config.validCustom.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let builtIn = Set(ProviderID.builtIns.map(\.id))
+        return builtIns().map { p in custom[p.id.id].map { CommandProvider($0) } ?? p }
+            + config.validCustom.filter { !builtIn.contains($0.id) }.map(CommandProvider.init)
     }
 }

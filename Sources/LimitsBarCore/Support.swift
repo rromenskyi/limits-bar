@@ -138,12 +138,19 @@ enum HTTP {
                         newRequest request: URLRequest) async -> URLRequest? { nil }
     }
 
-    static func json(_ request: URLRequest, provider: String) async throws -> [String: Any] {
+    /// - Parameters:
+    ///   - staleHint: replaces the default "use the CLI once" advice on 401/403.
+    ///   - notFound: on 404, report the provider as not configured with this message.
+    static func json(_ request: URLRequest, provider: String, staleHint: String? = nil,
+                     notFound: String? = nil) async throws -> [String: Any] {
         let (data, response) = try await session.data(for: request)
         let code = (response as? HTTPURLResponse)?.statusCode ?? 0
         switch code {
         case 200..<300: break
-        case 401, 403: throw ProviderError.stale(Lf("%@ rejected the token (HTTP %d). Use the %@ CLI once to refresh it.", provider, code, provider))
+        case 404 where notFound != nil: throw ProviderError.notConfigured(notFound!)
+        case 401, 403:
+            if let staleHint { throw ProviderError.stale(Lf("%@ rejected the token (HTTP %d). %@", provider, code, staleHint)) }
+            throw ProviderError.stale(Lf("%@ rejected the token (HTTP %d). Use the %@ CLI once to refresh it.", provider, code, provider))
         case 300..<400: throw ProviderError.failed(Lf("%@ usage request failed (HTTP %d)", provider, code))
         case 429: throw ProviderError.rateLimited(Lf("%@ is rate limiting usage checks (HTTP 429)", provider))
         default: throw ProviderError.failed(Lf("%@ usage request failed (HTTP %d)", provider, code))
